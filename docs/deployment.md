@@ -38,6 +38,32 @@ seed, icon, license, and changelog into one file and stores user data in
 version, PyInstaller version, git commit, and whether the worktree was dirty at
 build time.
 
+## Code Signing And SmartScreen
+
+Unsigned Windows executables may trigger Microsoft Defender SmartScreen with an
+`Unknown publisher` warning. This is expected for early public builds and is not
+specific to PyInstaller.
+
+For hardened public releases, sign both Windows executables before upload:
+
+```text
+dist\EditorBinder-<version>-win-x64.exe
+dist\EditorBinder-<version>-win-x64\EditorBinder.exe
+```
+
+Use a trusted Windows code-signing certificate or managed signing service. When
+using SignTool directly, sign with SHA-256 file and timestamp digests, use a
+timestamp server, and verify the signature before creating or uploading release
+assets. Example shape:
+
+```powershell
+signtool sign /fd SHA256 /td SHA256 /tr <timestamp-url> /a dist\EditorBinder-<version>-win-x64.exe
+signtool verify /pa /v dist\EditorBinder-<version>-win-x64.exe
+```
+
+After signing the folder executable, rebuild the Windows ZIP so the archive
+contains the signed `EditorBinder.exe`.
+
 ## Source ZIP
 
 Build the source/BAT package with:
@@ -98,10 +124,12 @@ a clean temporary folder, extract them, and check:
 4. Run the full test suite:
    `python -m unittest discover`
 5. Build the source ZIP and Windows EXE ZIP.
-6. Verify release artifacts:
+6. If code signing is available, sign the standalone EXE and the folder EXE,
+   then rebuild the Windows ZIP.
+7. Verify release artifacts:
    `python tools\verify_release_artifacts.py`
-7. Smoke test `dist\EditorBinder-<version>-win-x64\EditorBinder.exe`.
-8. Smoke test `dist\EditorBinder-<version>-win-x64.exe`.
-9. Create a GitHub Release and attach the standalone EXE, Windows ZIP, and
+8. Smoke test `dist\EditorBinder-<version>-win-x64\EditorBinder.exe`.
+9. Smoke test `dist\EditorBinder-<version>-win-x64.exe`.
+10. Create a GitHub Release and attach the standalone EXE, Windows ZIP, and
    source/BAT ZIP.
-10. Confirm GitHub Actions is green on `main`.
+11. Confirm GitHub Actions is green on `main`.

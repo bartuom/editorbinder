@@ -32,6 +32,12 @@ folder. Use `EditorBinder-source-<version>.zip` only when you want the source
 and BAT workflow for a local Python install. The automatic GitHub `Source code`
 downloads are for developers, not the recommended app download.
 
+The current Windows EXE is unsigned, so Microsoft Defender SmartScreen may show
+an `Unknown publisher` warning on first launch. Use only assets from the
+official GitHub Release. If you trust the download, choose `More info` /
+`Więcej informacji`, then `Run anyway` / `Uruchom mimo to`. Code signing is
+planned as release hardening.
+
 See `docs\downloads.md` for the full download guide.
 
 ## Quick Preview
