@@ -13,9 +13,11 @@ EditorBinder is released under the MIT License. See `LICENSE.txt` and
 
 ## Screenshots
 
-![EditorBinder main window with Free Core tools and parameters](docs/screenshots/editorbinder-main.png)
+![EditorBinder parameterized transform tool](docs/screenshots/editorbinder-randomize-transform.png)
 
-![EditorBinder compact library view with an expanded tool](docs/screenshots/editorbinder-library.png)
+![EditorBinder grid array tool with grouped numeric controls](docs/screenshots/editorbinder-grid-array.png)
+
+![EditorBinder Add Tool dialog with script validation](docs/screenshots/editorbinder-add-tool.png)
 
 ## Run From Source
 
