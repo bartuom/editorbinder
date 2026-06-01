@@ -1,5 +1,7 @@
 # Downloads
 
+Release page: https://github.com/bartuom/editorbinder/releases/latest
+
 Use the GitHub Release assets in this order:
 
 1. `EditorBinder-<version>-win-x64.exe`

@@ -17,7 +17,7 @@ EditorBinder is released under the MIT License. See `LICENSE.txt` and
 
 ## Downloads
 
-Latest release: [Download EditorBinder](https://github.com/bartuom/editorbinder/releases/latest)
+Latest Windows EXE: [Download EditorBinder from the latest release](https://github.com/bartuom/editorbinder/releases/latest)
 
 For most Windows users, download the single-file release asset:
 
@@ -34,15 +34,31 @@ downloads are for developers, not the recommended app download.
 
 See `docs\downloads.md` for the full download guide.
 
+## Quick Preview
+
+The short flow below shows the normal first-run path: open the local library,
+pick a bundled Free Core tool, create a new tool in `Add Tool`, and save it to
+the local library.
+
+![EditorBinder workflow: launch, choose a tool, add a tool, and save it](docs/screenshots/editorbinder-workflow.gif)
+
 ## Screenshots
 
-![EditorBinder visual walkthrough](docs/screenshots/editorbinder-walkthrough.gif)
+Library on first launch:
 
-![EditorBinder parameterized transform tool](docs/screenshots/editorbinder-randomize-transform.png)
+![EditorBinder library on first launch](docs/screenshots/editorbinder-library-launch.png)
 
-![EditorBinder grid array tool with grouped numeric controls](docs/screenshots/editorbinder-grid-array.png)
+Bundled tool with editable parameters:
 
-![EditorBinder Add Tool dialog with script validation](docs/screenshots/editorbinder-add-tool.png)
+![EditorBinder parameterized tool controls](docs/screenshots/editorbinder-tool-parameters.png)
+
+`Add Tool` with an AI marker-format answer ready to review and save:
+
+![EditorBinder Add Tool AI flow](docs/screenshots/editorbinder-add-tool-ai-flow.png)
+
+Saved user-created tool in the local library:
+
+![EditorBinder saved custom tool](docs/screenshots/editorbinder-saved-custom-tool.png)
 
 ## Run From Source
 
