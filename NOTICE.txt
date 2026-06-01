@@ -1,0 +1,9 @@
+EditorBinder
+
+Created by Bartosz Rozmus, 2026.
+
+EditorBinder is an independent, local-first utility for managing paste-ready
+Unreal Engine Python Console scripts.
+
+Unreal Engine is a trademark or registered trademark of Epic Games, Inc.
+EditorBinder is not affiliated with, endorsed by, or sponsored by Epic Games.

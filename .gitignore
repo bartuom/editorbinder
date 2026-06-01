@@ -1,0 +1,40 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments and build environments
+.venv/
+venv/
+.build-venv/
+
+# Test/tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+
+# Local runtime data
+data/settings.json
+data/user_tools.json
+data/user_tools.backup.json
+data/tools.backup.json
+data/*.bak
+portable.flag
+portable.txt
+
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Temporary files
+*.tmp
+*.bak
+*.log
