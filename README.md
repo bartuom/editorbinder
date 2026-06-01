@@ -17,15 +17,20 @@ EditorBinder is released under the MIT License. See `LICENSE.txt` and
 
 ## Downloads
 
+Latest release: [Download EditorBinder](https://github.com/bartuom/editorbinder/releases/latest)
+
 For most Windows users, download the single-file release asset:
 
 ```text
 EditorBinder-<version>-win-x64.exe
 ```
 
+On the release page, choose `EditorBinder-<version>-win-x64.exe`.
+
 Use `EditorBinder-<version>-win-x64.zip` only when you want a portable/debug
 folder. Use `EditorBinder-source-<version>.zip` only when you want the source
-and BAT workflow for a local Python install.
+and BAT workflow for a local Python install. The automatic GitHub `Source code`
+downloads are for developers, not the recommended app download.
 
 See `docs\downloads.md` for the full download guide.
 
