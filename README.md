@@ -11,6 +11,12 @@ into the Python Console, and execute.
 EditorBinder is released under the MIT License. See `LICENSE.txt` and
 `NOTICE.txt`.
 
+## Screenshots
+
+![EditorBinder main window with Free Core tools and parameters](docs/screenshots/editorbinder-main.png)
+
+![EditorBinder compact library view with an expanded tool](docs/screenshots/editorbinder-library.png)
+
 ## Run From Source
 
 Double-click:
