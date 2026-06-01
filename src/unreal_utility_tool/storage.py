@@ -178,7 +178,7 @@ def project_root() -> Path:
 
 def app_root() -> Path:
     if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
+        return Path(sys.executable).absolute().parent
     return project_root()
 
 
