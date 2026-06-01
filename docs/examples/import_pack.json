@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "tools": [
+    {
+      "id": "example-log-selected-count",
+      "name": "Log Selected Actor Count",
+      "description": "Logs how many actors are selected.",
+      "category": "Debug",
+      "tags": ["debug", "selection"],
+      "code": "import unreal\n\nselected = unreal.EditorLevelLibrary.get_selected_level_actors()\nunreal.log(f\"Selected actors: {len(selected)}\")\n"
+    },
+    {
+      "id": "example-hide-selected",
+      "name": "Hide Selected Actors In Editor",
+      "description": "Hides selected actors in the editor viewport.",
+      "category": "Organization",
+      "tags": ["visibility", "selection"],
+      "code": "import unreal\n\nfor actor in unreal.EditorLevelLibrary.get_selected_level_actors():\n    actor.set_is_temporarily_hidden_in_editor(True)\n"
+    }
+  ]
+}

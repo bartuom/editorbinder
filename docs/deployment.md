@@ -41,11 +41,48 @@ Build the source/BAT package with:
 build_source_zip.bat
 ```
 
+or directly:
+
+```powershell
+python tools\package_source_release.py
+```
+
 The output is:
 
 ```text
 dist\EditorBinder-source-<version>.zip
 ```
+
+The source/BAT ZIP is a user-facing package. It should include the app source,
+Free Core seed, docs, icon, license files, and BAT launch/reset helpers. It
+should not include tests, build outputs, private pack source, or local runtime
+files such as `data\user_tools.json` and `data\settings.json`.
+
+## Artifact Verification
+
+Run:
+
+```powershell
+python tools\verify_release_artifacts.py
+```
+
+The verification step checks the source/BAT ZIP and Windows package for the
+expected public contents, including:
+
+- MIT license files,
+- `data\tools.json` with the Free Core seed,
+- no `preset_packs` directory,
+- no commercial workflow files,
+- no local runtime files.
+
+For a manual release smoke test, download the ZIPs from the GitHub Release into
+a clean temporary folder, extract them, and check:
+
+1. `EditorBinder.exe` exists in the Windows package.
+2. `data\tools.json` contains the expected Free Core seed.
+3. `EditorBinder.exe` starts and stays open.
+4. The source/BAT ZIP contains `run_app.bat`.
+5. No private or paid-pack artifacts are present.
 
 ## Release Checklist
 
@@ -59,3 +96,4 @@ dist\EditorBinder-source-<version>.zip
    `python tools\verify_release_artifacts.py`
 7. Smoke test `dist\EditorBinder-<version>-win-x64\EditorBinder.exe`.
 8. Create a GitHub Release and attach the source/BAT ZIP plus Windows ZIP.
+9. Confirm GitHub Actions is green on `main`.

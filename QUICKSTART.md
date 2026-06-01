@@ -33,12 +33,19 @@ on a copy of a level first.
 
 1. Open `Add Tool`.
 2. Choose `Import Files`.
-3. Select a pack ZIP, `editorbinder-pack.json`, or an extracted pack folder.
+3. Select a `.json`, `.txt`, `.py`, pack ZIP, `editorbinder-pack.json`, or an
+   extracted pack folder.
 4. Keep `Skip duplicates` selected when importing more than one pack.
 5. Click `Save Imported`.
 
 EditorBinder imports the root `editorbinder-pack.json` when an extracted folder
 contains one, so bundle folders can provide a single combined payload.
+
+Small import examples are included in:
+
+```text
+docs\examples\
+```
 
 ## 4. Create A Tool With AI
 
@@ -50,6 +57,12 @@ contains one, so bundle folders can provide a single combined payload.
 6. Review and save the parsed tool.
 
 No AI API key is required for the default copy/paste workflow.
+
+More details and marker-format examples are in:
+
+```text
+docs\ai_workflow.md
+```
 
 ## 5. Where Tools Are Stored
 

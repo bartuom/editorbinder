@@ -1,0 +1,8 @@
+{
+  "id": "example-select-point-lights",
+  "name": "Select Point Lights",
+  "description": "Selects all point light actors in the current level.",
+  "category": "Selection",
+  "tags": ["selection", "lights"],
+  "code": "import unreal\n\nactors = unreal.EditorLevelLibrary.get_all_level_actors()\nfor actor in actors:\n    actor.set_actor_selection_state(actor.get_class().get_name() == \"PointLight\")\n"
+}

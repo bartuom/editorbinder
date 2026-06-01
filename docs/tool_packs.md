@@ -13,6 +13,15 @@ EditorBinder can import either a ZIP directly or an extracted pack folder. If an
 extracted folder contains a root `editorbinder-pack.json`, that root payload is
 imported once and nested bundle ZIPs/manifests are ignored.
 
+Small import examples are available in:
+
+```text
+docs\examples\
+```
+
+The examples cover one-tool JSON, multi-tool JSON, marker-format text, plain
+Python scripts, and a folder with a root `editorbinder-pack.json`.
+
 ## Pack JSON
 
 A pack ZIP can contain:
@@ -120,4 +129,16 @@ The bundled Free Core seed remains unchanged during user imports:
 
 ```text
 data\tools.json
+```
+
+## Example Files
+
+Use these files to test the import flow without building a full pack first:
+
+```text
+docs\examples\import_json_tool.json
+docs\examples\import_pack.json
+docs\examples\import_marker_tool.txt
+docs\examples\import_python_tool.py
+docs\examples\pack_folder\
 ```

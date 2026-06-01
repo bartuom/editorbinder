@@ -1,0 +1,11 @@
+<<<UUT_NAME>>>
+Print Selected Actor Names
+<<<UUT_NOTES>>>
+Logs the labels of currently selected actors.
+<<<UUT_CODE>>>
+import unreal
+
+selected = unreal.EditorLevelLibrary.get_selected_level_actors()
+for actor in selected:
+    unreal.log(actor.get_actor_label())
+<<<UUT_END>>>

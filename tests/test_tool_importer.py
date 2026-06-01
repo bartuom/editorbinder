@@ -232,6 +232,31 @@ unreal.log("ok")
         self.assertEqual([tool.id for tool in tools], ["root-tool"])
         self.assertEqual([tool.name for tool in tools], ["Root Bundle Tool"])
 
+    def test_docs_import_examples_remain_importable(self) -> None:
+        examples_root = Path(__file__).resolve().parents[1] / "docs" / "examples"
+        paths = [
+            examples_root / "import_json_tool.json",
+            examples_root / "import_pack.json",
+            examples_root / "import_marker_tool.txt",
+            examples_root / "import_python_tool.py",
+            examples_root / "pack_folder",
+        ]
+
+        tools, errors = import_tools_from_paths(paths)
+
+        self.assertEqual(errors, [])
+        self.assertEqual(
+            [tool.name for tool in tools],
+            [
+                "Select Point Lights",
+                "Log Selected Actor Count",
+                "Hide Selected Actors In Editor",
+                "Print Selected Actor Names",
+                "Move Selected Actors Up",
+                "Log Current Level Name",
+            ],
+        )
+
     def test_zip_without_pack_payload_reports_error(self) -> None:
         with TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "empty-pack.zip"

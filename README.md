@@ -88,6 +88,9 @@ and `enum`.
 The tool menu also supports favorites, recently copied tools, parameter reset,
 single-tool export, `Copy Fix Prompt`, and library backup/restore.
 
+See `docs\ai_workflow.md` for marker-format examples, parameter metadata, and
+the fix-prompt workflow.
+
 ## Bundled Tools
 
 The default library starts with a 15-tool Free Core focused on everyday Unreal
@@ -133,6 +136,14 @@ When imported tool IDs or names already exist, choose `Skip duplicates`,
 bundle folders are treated as one root pack when they contain
 `editorbinder-pack.json`.
 
+Import examples are available in:
+
+```text
+docs\examples\
+```
+
+See `docs\tool_packs.md` for pack JSON and folder bundle details.
+
 ## Data Locations
 
 For source and portable runs, the editable working library file is:
@@ -164,6 +175,14 @@ Local Unreal Python API notes and known pitfalls are kept in:
 ```text
 docs\unreal_api_notes.md
 ```
+
+## Documentation
+
+- `QUICKSTART.md` covers the shortest first-run path.
+- `docs\ai_workflow.md` explains AI-assisted tool creation.
+- `docs\tool_packs.md` documents importable pack formats.
+- `docs\deployment.md` covers release packaging and verification.
+- `docs\examples\` contains small import fixtures users can try directly.
 
 ## Development
 

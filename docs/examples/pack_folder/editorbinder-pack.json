@@ -1,0 +1,22 @@
+{
+  "pack_id": "example_pack",
+  "pack_name": "Example Pack",
+  "version": "0.1.0",
+  "min_app_version": "0.1.0",
+  "recommended_import_policy": "skip",
+  "target_roles": ["Technical Artist"],
+  "workflow_pitch": "Small example tools for testing EditorBinder import.",
+  "tools": [
+    {
+      "id": "example-pack-log-level-name",
+      "name": "Log Current Level Name",
+      "description": "Logs the current editor world name.",
+      "category": "Debug",
+      "tags": ["debug", "level"],
+      "workflows": ["Scene Audit"],
+      "roles": ["Technical Artist"],
+      "visibility": "secondary",
+      "code": "import unreal\n\nworld = unreal.EditorLevelLibrary.get_editor_world()\nunreal.log(world.get_name())\n"
+    }
+  ]
+}
