@@ -18,6 +18,7 @@ REQUIRED_RELEASE_FILES = {
     "LICENSE.txt",
     "NOTICE.txt",
     "SUPPORT_POLICY.md",
+    "assets/editorbinder.png",
     "data/tools.json",
 }
 DISALLOWED_PATH_PARTS = {

@@ -1,4 +1,4 @@
-# EditorBinder
+# <img src="assets/editorbinder.png" alt="EditorBinder icon" width="42" height="42"> EditorBinder
 
 [![CI](https://github.com/bartuom/editorbinder/actions/workflows/ci.yml/badge.svg)](https://github.com/bartuom/editorbinder/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/bartuom/editorbinder?label=release)](https://github.com/bartuom/editorbinder/releases/latest)
@@ -268,6 +268,7 @@ reset_window.bat
 enable_portable_mode.bat
 run_app.pyw
 assets\editorbinder.ico
+assets\editorbinder.png
 src\
 data\tools.json
 docs\

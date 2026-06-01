@@ -33,6 +33,7 @@ SUPPORT_FILES = [
     ("reset_window.bat", "reset_window.bat"),
     ("install_windows_shortcuts.bat", "install_windows_shortcuts.bat"),
     ("assets/editorbinder.ico", "assets/editorbinder.ico"),
+    ("assets/editorbinder.png", "assets/editorbinder.png"),
     ("data/tools.json", "data/tools.json"),
 ]
 
@@ -283,6 +284,7 @@ def _verify_required_files(root: Path) -> None:
     required = [
         root / "run_app.pyw",
         root / "assets" / "editorbinder.ico",
+        root / "assets" / "editorbinder.png",
         root / "data" / "tools.json",
         root / "LICENSE.txt",
         root / "CHANGELOG.md",

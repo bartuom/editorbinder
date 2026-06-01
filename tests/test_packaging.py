@@ -65,6 +65,7 @@ class PackagingTests(unittest.TestCase):
             "run_app.bat",
             "run_app.pyw",
             "assets/editorbinder.ico",
+            "assets/editorbinder.png",
             "data/tools.json",
             "docs/deployment.md",
             "docs/preset_test_matrix.md",
@@ -102,6 +103,7 @@ class PackagingTests(unittest.TestCase):
             self.assertIn("SECURITY.md", names)
             self.assertIn("CODE_OF_CONDUCT.md", names)
             self.assertIn("assets/editorbinder.ico", names)
+            self.assertIn("assets/editorbinder.png", names)
             self.assertIn("data/tools.json", names)
             self.assertIn("docs/deployment.md", names)
             self.assertIn("docs/preset_test_matrix.md", names)
@@ -151,6 +153,7 @@ class PackagingTests(unittest.TestCase):
 
         self.assertIn("data/tools.json", targets)
         self.assertIn("assets/editorbinder.ico", targets)
+        self.assertIn("assets/editorbinder.png", targets)
         self.assertIn("LICENSE.txt", targets)
         self.assertIn("CHANGELOG.md", targets)
         self.assertIn("QUICKSTART.md", targets)
@@ -225,6 +228,7 @@ class PackagingTests(unittest.TestCase):
             "enable_portable_mode.bat",
             "run_app.pyw",
             "assets/editorbinder.ico",
+            "assets/editorbinder.png",
             "data/tools.json",
             "README.md",
             "QUICKSTART.md",
