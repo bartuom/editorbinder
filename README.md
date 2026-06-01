@@ -1,5 +1,9 @@
 # EditorBinder
 
+[![CI](https://github.com/bartuom/editorbinder/actions/workflows/ci.yml/badge.svg)](https://github.com/bartuom/editorbinder/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/bartuom/editorbinder?label=release)](https://github.com/bartuom/editorbinder/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.txt)
+
 Lightweight desktop utility for storing paste-ready Unreal Engine Python
 Console scripts.
 
