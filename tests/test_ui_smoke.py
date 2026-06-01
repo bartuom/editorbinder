@@ -41,7 +41,10 @@ class UiSmokeTests(unittest.TestCase):
             settings_store = AppSettingsStore(Path(temp_dir) / "settings.json")
             seed_path = Path(__file__).resolve().parents[1] / "data" / "tools.json"
             store.save_tools(ToolLibraryStore(seed_path).load_tools())
-            root = tk.Tk()
+            try:
+                root = tk.Tk()
+            except tk.TclError as exc:
+                self.skipTest(f"tkinter root window is unavailable on this runner: {exc}")
             root.withdraw()
             try:
                 app = UnrealUtilityApp(root, store, settings_store=settings_store)
