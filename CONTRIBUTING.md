@@ -20,7 +20,11 @@ python -m unittest discover
 - Keep bundled tools in `data/tools.json` small, general-purpose, and safe to
   review before running in Unreal Engine.
 - Do not commit local runtime files such as `data/user_tools.json`,
-  `data/settings.json`, build outputs, screenshots, or secrets.
+  `data/settings.json`, build outputs, unreviewed screenshots, or secrets.
+- Run `python -m unittest discover` before opening a pull request.
+- Public hygiene tests must stay green: the public tree must not contain
+  private pack source, commercial workflow files, restrictive license terms, or
+  secret tokens.
 
 ## Tool Contributions
 
