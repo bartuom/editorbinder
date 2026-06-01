@@ -377,18 +377,48 @@ class ToolLibraryStoreTests(unittest.TestCase):
                         app_root / "data" / "user_tools.json",
                     )
 
+    def test_release_seed_can_be_loaded_from_pyinstaller_onefile_resource_root(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            app_root = Path(temp_dir) / "app"
+            resource_root = Path(temp_dir) / "meipass"
+            seed_path = resource_root / "data" / "tools.json"
+            seed_tool = Tool.create(name="Bundled Tool", code="print('bundled')")
+            ToolLibraryStore(seed_path).save_tools([seed_tool])
+            app_root.mkdir()
+
+            with _patched_runtime(frozen=True, executable=app_root / "EditorBinder.exe", meipass=resource_root):
+                self.assertEqual(storage.resource_root(), resource_root)
+                self.assertEqual(storage.resolve_release_seed_path(), seed_path)
+
+    def test_app_file_path_falls_back_to_pyinstaller_onefile_resource_root(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            app_root = Path(temp_dir) / "app"
+            resource_root = Path(temp_dir) / "meipass"
+            license_path = resource_root / "LICENSE.txt"
+            app_root.mkdir()
+            resource_root.mkdir()
+            license_path.write_text("MIT", encoding="utf-8")
+
+            with _patched_runtime(frozen=True, executable=app_root / "EditorBinder.exe", meipass=resource_root):
+                self.assertEqual(storage.app_file_path("LICENSE.txt"), license_path)
+
 
 class _patched_runtime:
-    def __init__(self, *, frozen: bool, executable: Path) -> None:
+    def __init__(self, *, frozen: bool, executable: Path, meipass: Path | None = None) -> None:
         self.frozen = frozen
         self.executable = str(executable)
+        self.meipass = str(meipass) if meipass is not None else None
         self.had_frozen = hasattr(sys, "frozen")
+        self.had_meipass = hasattr(sys, "_MEIPASS")
         self.old_frozen = getattr(sys, "frozen", None)
+        self.old_meipass = getattr(sys, "_MEIPASS", None)
         self.old_executable = sys.executable
 
     def __enter__(self):
         sys.frozen = self.frozen
         sys.executable = self.executable
+        if self.meipass is not None:
+            sys._MEIPASS = self.meipass
         return self
 
     def __exit__(self, *_exc):
@@ -396,6 +426,10 @@ class _patched_runtime:
             sys.frozen = self.old_frozen
         else:
             delattr(sys, "frozen")
+        if self.had_meipass:
+            sys._MEIPASS = self.old_meipass
+        elif hasattr(sys, "_MEIPASS"):
+            delattr(sys, "_MEIPASS")
         sys.executable = self.old_executable
 
 

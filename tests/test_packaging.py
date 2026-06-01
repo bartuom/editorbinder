@@ -142,6 +142,7 @@ class PackagingTests(unittest.TestCase):
         self.assertEqual(paths.package_name, f"EditorBinder-{paths.version}-win-x64")
         self.assertEqual(paths.release_dir, root / "dist" / paths.package_name)
         self.assertEqual(paths.archive_path, root / "dist" / f"{paths.package_name}.zip")
+        self.assertEqual(paths.standalone_exe_path, root / "dist" / f"{paths.package_name}.exe")
 
     def test_windows_release_support_files_include_runtime_seed(self) -> None:
         module = _load_windows_packaging_module()
@@ -159,6 +160,8 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("enable_portable_mode.bat", targets)
         self.assertIn("reset_window.bat", targets)
         self.assertIn("install_windows_shortcuts.bat", targets)
+        self.assertIn("docs/downloads.md", targets)
+        self.assertIn("docs/walkthrough.md", targets)
         self.assertIn("docs/tool_packs.md", targets)
 
     def test_windows_pyinstaller_command_bundles_runtime_seed(self) -> None:
@@ -179,6 +182,26 @@ class PackagingTests(unittest.TestCase):
         self.assertIn(str(root / "run_app.pyw"), command)
         self.assertIn(str(root / "data" / "tools.json"), command_text)
         self.assertIn(str(root / "assets" / "editorbinder.ico"), command_text)
+
+    def test_windows_onefile_pyinstaller_command_bundles_runtime_seed(self) -> None:
+        module = _load_windows_packaging_module()
+        root = Path(__file__).resolve().parents[1]
+
+        command = module.pyinstaller_command(
+            root,
+            "pyinstaller.exe",
+            root / "build" / "windows-release" / "pyinstaller-onefile-dist",
+            root / "build" / "windows-release" / "pyinstaller-onefile-work",
+            root / "build" / "windows-release" / "pyinstaller-onefile-spec",
+            onefile=True,
+        )
+        command_text = "\n".join(str(part) for part in command)
+
+        self.assertIn("--onefile", command)
+        self.assertIn("--windowed", command)
+        self.assertIn(str(root / "run_app.pyw"), command)
+        self.assertIn(str(root / "data" / "tools.json"), command_text)
+        self.assertIn(str(root / "LICENSE.txt"), command_text)
 
     def test_readme_matches_public_source_release_manifest(self) -> None:
         module = _load_packaging_module()

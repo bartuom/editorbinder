@@ -13,6 +13,8 @@ All notable user-facing changes for EditorBinder are documented here.
 - Added a visual walkthrough GIF and `docs\walkthrough.md`.
 - Added import examples under `docs\examples\`.
 - Added `docs\ai_workflow.md` for marker-format AI-assisted tool creation.
+- Added a standalone Windows EXE release asset for the default download path.
+- Added `docs\downloads.md` to clarify EXE, portable ZIP, and source ZIP usage.
 - Expanded release packaging and artifact verification docs.
 
 ## 0.1.0 - 2026-05-29

@@ -182,6 +182,21 @@ def app_root() -> Path:
     return project_root()
 
 
+def resource_root() -> Path:
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", "")
+        if meipass:
+            return Path(meipass)
+    return app_root()
+
+
+def app_file_path(filename: str) -> Path:
+    app_path = app_root() / filename
+    if app_path.exists():
+        return app_path
+    return resource_root() / filename
+
+
 def is_portable_mode() -> bool:
     value = os.environ.get("UNREAL_UTILITY_TOOL_PORTABLE", "").strip().casefold()
     if value in {"1", "true", "yes", "y", "on"}:
@@ -204,6 +219,9 @@ def resolve_default_storage_path() -> Path:
 
 
 def resolve_release_seed_path() -> Path:
+    resource_seed = resource_root() / "data" / RELEASE_SEED_FILENAME
+    if resource_seed.exists():
+        return resource_seed
     return app_root() / "data" / RELEASE_SEED_FILENAME
 
 

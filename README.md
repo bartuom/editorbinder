@@ -15,6 +15,20 @@ into the Python Console, and execute.
 EditorBinder is released under the MIT License. See `LICENSE.txt` and
 `NOTICE.txt`.
 
+## Downloads
+
+For most Windows users, download the single-file release asset:
+
+```text
+EditorBinder-<version>-win-x64.exe
+```
+
+Use `EditorBinder-<version>-win-x64.zip` only when you want a portable/debug
+folder. Use `EditorBinder-source-<version>.zip` only when you want the source
+and BAT workflow for a local Python install.
+
+See `docs\downloads.md` for the full download guide.
+
 ## Screenshots
 
 ![EditorBinder visual walkthrough](docs/screenshots/editorbinder-walkthrough.gif)
@@ -184,6 +198,7 @@ docs\unreal_api_notes.md
 ## Documentation
 
 - `QUICKSTART.md` covers the shortest first-run path.
+- `docs\downloads.md` explains which GitHub Release asset to download.
 - `docs\walkthrough.md` shows the visual first-run flow.
 - `docs\ai_workflow.md` explains AI-assisted tool creation.
 - `docs\tool_packs.md` documents importable pack formats.
@@ -210,6 +225,8 @@ Build the Windows package:
 ```powershell
 python tools\package_windows_release.py
 ```
+
+This creates both the portable Windows ZIP and the single-file Windows EXE.
 
 ## Source/BAT Package Contents
 

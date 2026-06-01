@@ -24,7 +24,7 @@ from ..models import (
 from ..params import ParamRenderError, ToolParam, parse_tool_params, render_tool_code, validate_param_value
 from ..prompts import build_fix_prompt
 from ..settings import AppSettingsStore, resolve_default_settings_path
-from ..storage import ToolLibraryStore, app_root, refresh_bundled_presets
+from ..storage import ToolLibraryStore, app_file_path, app_root, refresh_bundled_presets
 from ..theme import (
     ACCENT,
     ACCENT_DARK,
@@ -2939,7 +2939,7 @@ class UnrealUtilityApp:
         self._open_app_file("CHANGELOG.md", "changelog")
 
     def _open_app_file(self, filename: str, label: str) -> None:
-        path = app_root() / filename
+        path = app_file_path(filename)
         if not path.exists():
             messagebox.showwarning(
                 "File Not Found",

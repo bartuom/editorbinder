@@ -69,11 +69,14 @@ def _verify_source_zip(root: Path, version: str, checks: list[str]) -> None:
 def _verify_windows_release(root: Path, version: str, checks: list[str]) -> None:
     release_dir = root / "dist" / f"{APP_NAME}-{version}-{PLATFORM_TAG}"
     release_zip = root / "dist" / f"{APP_NAME}-{version}-{PLATFORM_TAG}.zip"
+    standalone_exe = root / "dist" / f"{APP_NAME}-{version}-{PLATFORM_TAG}.exe"
     exe = release_dir / f"{APP_NAME}.exe"
     if not release_dir.is_dir():
         raise RuntimeError(f"Missing Windows release directory: {release_dir}")
     if not release_zip.is_file():
         raise RuntimeError(f"Missing Windows release ZIP: {release_zip}")
+    if not standalone_exe.is_file():
+        raise RuntimeError(f"Missing standalone Windows executable: {standalone_exe}")
     if not exe.is_file():
         raise RuntimeError(f"Missing Windows executable: {exe}")
 
@@ -90,6 +93,7 @@ def _verify_windows_release(root: Path, version: str, checks: list[str]) -> None
         _reject_disallowed_text(release_zip.name, archive)
 
     checks.append(f"Windows release OK: {release_dir.name}")
+    checks.append(f"Standalone EXE OK: {standalone_exe.name}")
 
 
 def _require_names(label: str, names: set[str], required: set[str]) -> None:

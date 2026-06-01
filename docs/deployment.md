@@ -23,11 +23,16 @@ The output is versioned from `pyproject.toml`:
 ```text
 dist\EditorBinder-<version>-win-x64\
 dist\EditorBinder-<version>-win-x64.zip
+dist\EditorBinder-<version>-win-x64.exe
 ```
 
 The folder contains `EditorBinder.exe`, the release seed at `data\tools.json`,
 license files, the changelog, portable-mode helper, reset helper, shortcut
 installer, and `release.json`.
+
+The standalone `.exe` is the primary end-user download. It bundles the runtime
+seed, icon, license, and changelog into one file and stores user data in
+`%APPDATA%\EditorBinder` unless the user imports/exports tools manually.
 
 `release.json` records the app version, package name, build timestamp, Python
 version, PyInstaller version, git commit, and whether the worktree was dirty at
@@ -81,8 +86,9 @@ a clean temporary folder, extract them, and check:
 1. `EditorBinder.exe` exists in the Windows package.
 2. `data\tools.json` contains the expected Free Core seed.
 3. `EditorBinder.exe` starts and stays open.
-4. The source/BAT ZIP contains `run_app.bat`.
-5. No private or paid-pack artifacts are present.
+4. `EditorBinder-<version>-win-x64.exe` exists and starts.
+5. The source/BAT ZIP contains `run_app.bat`.
+6. No private or paid-pack artifacts are present.
 
 ## Release Checklist
 
@@ -95,5 +101,7 @@ a clean temporary folder, extract them, and check:
 6. Verify release artifacts:
    `python tools\verify_release_artifacts.py`
 7. Smoke test `dist\EditorBinder-<version>-win-x64\EditorBinder.exe`.
-8. Create a GitHub Release and attach the source/BAT ZIP plus Windows ZIP.
-9. Confirm GitHub Actions is green on `main`.
+8. Smoke test `dist\EditorBinder-<version>-win-x64.exe`.
+9. Create a GitHub Release and attach the standalone EXE, Windows ZIP, and
+   source/BAT ZIP.
+10. Confirm GitHub Actions is green on `main`.
