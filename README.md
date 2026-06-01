@@ -17,6 +17,8 @@ EditorBinder is released under the MIT License. See `LICENSE.txt` and
 
 ## Screenshots
 
+![EditorBinder visual walkthrough](docs/screenshots/editorbinder-walkthrough.gif)
+
 ![EditorBinder parameterized transform tool](docs/screenshots/editorbinder-randomize-transform.png)
 
 ![EditorBinder grid array tool with grouped numeric controls](docs/screenshots/editorbinder-grid-array.png)
@@ -179,6 +181,7 @@ docs\unreal_api_notes.md
 ## Documentation
 
 - `QUICKSTART.md` covers the shortest first-run path.
+- `docs\walkthrough.md` shows the visual first-run flow.
 - `docs\ai_workflow.md` explains AI-assisted tool creation.
 - `docs\tool_packs.md` documents importable pack formats.
 - `docs\deployment.md` covers release packaging and verification.

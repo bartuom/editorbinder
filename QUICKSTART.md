@@ -4,6 +4,12 @@ EditorBinder is a standalone clipboard library for Unreal Engine Python Console
 tools. It does not install into Unreal Engine and it does not run scripts
 automatically.
 
+For a visual overview, see:
+
+```text
+docs\walkthrough.md
+```
+
 ## 1. Open The App
 
 For the source/BAT release, run:
