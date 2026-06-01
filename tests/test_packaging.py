@@ -127,7 +127,7 @@ class PackagingTests(unittest.TestCase):
         support = (root / "SUPPORT_POLICY.md").read_text(encoding="utf-8")
 
         self.assertIn("Initial open-source Free Core release", changelog)
-        self.assertIn("15-tool Free Core", changelog)
+        self.assertIn("18-tool Free Core", changelog)
         self.assertIn("community-supported open source", support)
         self.assertNotIn("pur" + "chase", support.casefold())
         self.assertNotIn("re" + "fund", support.casefold())
@@ -222,7 +222,7 @@ class PackagingTests(unittest.TestCase):
         self.assertTrue(any(path.startswith("src/") for path in files))
         self.assertIn("docs\\", text)
         self.assertIn("src\\", text)
-        self.assertIn("15-tool Free Core", text)
+        self.assertIn("18-tool Free Core", text)
 
     def test_public_git_index_does_not_include_private_artifacts(self) -> None:
         root = Path(__file__).resolve().parents[1]

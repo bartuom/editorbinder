@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 APP_NAME = "EditorBinder"
-FREE_CORE_COUNT = 15
+FREE_CORE_COUNT = 18
 PLATFORM_TAG = "win-x64"
 REQUIRED_RELEASE_FILES = {
     "README.md",

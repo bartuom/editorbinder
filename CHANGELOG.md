@@ -2,6 +2,19 @@
 
 All notable user-facing changes for EditorBinder are documented here.
 
+## 0.1.1 - 2026-06-01
+
+### Added
+
+- Expanded the default 18-tool Free Core release seed with:
+  - Select Actors By Label Text
+  - Select Actors By Class Name
+  - Report Selected Actors Summary
+- Added a visual walkthrough GIF and `docs\walkthrough.md`.
+- Added import examples under `docs\examples\`.
+- Added `docs\ai_workflow.md` for marker-format AI-assisted tool creation.
+- Expanded release packaging and artifact verification docs.
+
 ## 0.1.0 - 2026-05-29
 
 Initial open-source Free Core release.

@@ -364,6 +364,82 @@
         "Environment Artist"
       ],
       "visibility": "primary"
+    },
+    {
+      "id": "preset-select-actors-by-label-text",
+      "name": "Select Actors By Label Text",
+      "description": "Selects actors whose labels match a text query with contains, starts with, ends with, or exact matching.",
+      "tags": [
+        "actors",
+        "selection",
+        "labels",
+        "params"
+      ],
+      "code": "# Param: text | str | SM_ | Label Text\n# Param: match_mode | enum | contains | Match Mode | options=contains,starts_with,ends_with,exact\n# Param: case_sensitive | bool | False | Case Sensitive\n# Param: include_hidden | bool | True | Include Hidden Actors\n# Param: append_to_selection | bool | False | Append To Current Selection\nimport unreal\n\ntext = {{text}}\nmatch_mode = {{match_mode}}\ncase_sensitive = {{case_sensitive}}\ninclude_hidden = {{include_hidden}}\nappend_to_selection = {{append_to_selection}}\n\nactor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nall_actors = [actor for actor in actor_subsystem.get_all_level_actors() if actor is not None]\n\ndef actor_label(actor):\n    try:\n        return actor.get_actor_label()\n    except Exception:\n        return actor.get_name()\n\ndef is_actor_hidden(actor):\n    for method_name in (\"is_hidden_ed\", \"get_is_temporarily_hidden_in_editor\"):\n        try:\n            return bool(getattr(actor, method_name)())\n        except Exception:\n            pass\n    try:\n        return bool(actor.get_editor_property(\"hidden\"))\n    except Exception:\n        return False\n\ndef matches_text(value, query, mode):\n    if not case_sensitive:\n        value = value.casefold()\n        query = query.casefold()\n    if mode == \"exact\":\n        return value == query\n    if mode == \"starts_with\":\n        return value.startswith(query)\n    if mode == \"ends_with\":\n        return value.endswith(query)\n    return query in value\n\ndef unique_actors(actors):\n    result = []\n    for actor in actors:\n        if actor is not None and actor not in result:\n            result.append(actor)\n    return result\n\nquery = str(text).strip()\nmode = str(match_mode).strip().lower()\nif mode not in (\"contains\", \"starts_with\", \"ends_with\", \"exact\"):\n    mode = \"contains\"\n\nif not query:\n    unreal.log_warning(\"Label Text is empty.\")\nelse:\n    candidates = all_actors if include_hidden else [actor for actor in all_actors if not is_actor_hidden(actor)]\n    matches = [actor for actor in candidates if matches_text(actor_label(actor), query, mode)]\n    selected = unique_actors(list(actor_subsystem.get_selected_level_actors()) + matches) if append_to_selection else matches\n    actor_subsystem.set_selected_level_actors(selected)\n    unreal.log(\n        f\"Selected {len(matches)} actor(s) by label text '{query}' using mode '{mode}'. \"\n        f\"Total selection: {len(selected)}.\"\n    )\n",
+      "created_at": "2026-06-01T00:00:00+00:00",
+      "updated_at": "2026-06-01T00:00:00+00:00",
+      "category": "Selection",
+      "workflows": [
+        "Scene Cleanup",
+        "Naming & Organization"
+      ],
+      "roles": [
+        "Level Artist",
+        "Environment Artist",
+        "Tech Artist"
+      ],
+      "visibility": "primary"
+    },
+    {
+      "id": "preset-select-actors-by-class-name",
+      "name": "Select Actors By Class Name",
+      "description": "Selects actors whose Unreal class name matches a text query.",
+      "tags": [
+        "actors",
+        "selection",
+        "class",
+        "params"
+      ],
+      "code": "# Param: class_text | str | StaticMeshActor | Class Text\n# Param: match_mode | enum | contains | Match Mode | options=contains,starts_with,ends_with,exact\n# Param: include_hidden | bool | True | Include Hidden Actors\n# Param: append_to_selection | bool | False | Append To Current Selection\nimport unreal\n\nclass_text = {{class_text}}\nmatch_mode = {{match_mode}}\ninclude_hidden = {{include_hidden}}\nappend_to_selection = {{append_to_selection}}\n\nactor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nall_actors = [actor for actor in actor_subsystem.get_all_level_actors() if actor is not None]\n\ndef actor_label(actor):\n    try:\n        return actor.get_actor_label()\n    except Exception:\n        return actor.get_name()\n\ndef actor_class_name(actor):\n    try:\n        return actor.get_class().get_name()\n    except Exception:\n        return actor.__class__.__name__\n\ndef is_actor_hidden(actor):\n    for method_name in (\"is_hidden_ed\", \"get_is_temporarily_hidden_in_editor\"):\n        try:\n            return bool(getattr(actor, method_name)())\n        except Exception:\n            pass\n    try:\n        return bool(actor.get_editor_property(\"hidden\"))\n    except Exception:\n        return False\n\ndef matches_text(value, query, mode):\n    value = value.casefold()\n    query = query.casefold()\n    if mode == \"exact\":\n        return value == query\n    if mode == \"starts_with\":\n        return value.startswith(query)\n    if mode == \"ends_with\":\n        return value.endswith(query)\n    return query in value\n\ndef unique_actors(actors):\n    result = []\n    for actor in actors:\n        if actor is not None and actor not in result:\n            result.append(actor)\n    return result\n\nquery = str(class_text).strip()\nmode = str(match_mode).strip().lower()\nif mode not in (\"contains\", \"starts_with\", \"ends_with\", \"exact\"):\n    mode = \"contains\"\n\nif not query:\n    unreal.log_warning(\"Class Text is empty.\")\nelse:\n    candidates = all_actors if include_hidden else [actor for actor in all_actors if not is_actor_hidden(actor)]\n    matches = [actor for actor in candidates if matches_text(actor_class_name(actor), query, mode)]\n    selected = unique_actors(list(actor_subsystem.get_selected_level_actors()) + matches) if append_to_selection else matches\n    actor_subsystem.set_selected_level_actors(selected)\n    preview = \", \".join(f\"{actor_label(actor)} [{actor_class_name(actor)}]\" for actor in matches[:8])\n    unreal.log(\n        f\"Selected {len(matches)} actor(s) by class text '{query}' using mode '{mode}'. \"\n        f\"Total selection: {len(selected)}.\"\n    )\n    if preview:\n        unreal.log(f\"Class selection preview: {preview}\")\n",
+      "created_at": "2026-06-01T00:00:00+00:00",
+      "updated_at": "2026-06-01T00:00:00+00:00",
+      "category": "Selection",
+      "workflows": [
+        "Scene Cleanup",
+        "Set Dressing"
+      ],
+      "roles": [
+        "Level Artist",
+        "Environment Artist",
+        "Tech Artist"
+      ],
+      "visibility": "primary"
+    },
+    {
+      "id": "preset-report-selected-actors-summary",
+      "name": "Report Selected Actors Summary",
+      "description": "Logs selected actor labels, classes, folders, transforms, bounds, and optional component counts.",
+      "tags": [
+        "actors",
+        "audit",
+        "report",
+        "selection",
+        "params"
+      ],
+      "code": "# Param: max_actors | int | 25 | Max Actors | min=1 | max=500 | step=5\n# Param: include_components | bool | True | Include Component Counts\n# Param: include_transform | bool | True | Include Transform\nimport unreal\n\nmax_actors = {{max_actors}}\ninclude_components = {{include_components}}\ninclude_transform = {{include_transform}}\n\nactor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nselected_actors = [actor for actor in actor_subsystem.get_selected_level_actors() if actor is not None]\nmax_actors = max(1, int(max_actors))\n\ndef actor_label(actor):\n    try:\n        return actor.get_actor_label()\n    except Exception:\n        return actor.get_name()\n\ndef actor_class_name(actor):\n    try:\n        return actor.get_class().get_name()\n    except Exception:\n        return actor.__class__.__name__\n\ndef actor_folder_path(actor):\n    try:\n        return str(actor.get_folder_path()).replace(\"\\\\\", \"/\")\n    except Exception:\n        return \"\"\n\ndef actor_bounds_size(actor):\n    try:\n        _origin, extent = actor.get_actor_bounds(False)\n        return max(abs(extent.x), abs(extent.y), abs(extent.z)) * 2.0\n    except Exception:\n        return 0.0\n\ndef component_count(actor):\n    try:\n        return len(list(actor.get_components_by_class(unreal.ActorComponent)))\n    except Exception:\n        return 0\n\ndef vector_text(vector):\n    return f\"({vector.x:.1f}, {vector.y:.1f}, {vector.z:.1f})\"\n\nif not selected_actors:\n    unreal.log_warning(\"No actors are selected.\")\nelse:\n    unreal.log(\"EditorBinder Selected Actors Summary\")\n    unreal.log(\"===================================\")\n    unreal.log(f\"Selected actors: {len(selected_actors)}\")\n    unreal.log(f\"Showing: {min(len(selected_actors), max_actors)}\")\n\n    class_counts = {}\n    for actor in selected_actors:\n        class_name = actor_class_name(actor)\n        class_counts[class_name] = class_counts.get(class_name, 0) + 1\n\n    unreal.log(\"Classes:\")\n    for class_name, count in sorted(class_counts.items(), key=lambda item: (-item[1], item[0])):\n        unreal.log(f\"  {class_name}: {count}\")\n\n    unreal.log(\"Actors:\")\n    for index, actor in enumerate(selected_actors[:max_actors], start=1):\n        parts = [\n            f\"{index:03d}\",\n            actor_label(actor),\n            f\"class={actor_class_name(actor)}\",\n        ]\n        folder = actor_folder_path(actor)\n        if folder:\n            parts.append(f\"folder={folder}\")\n        parts.append(f\"bounds={actor_bounds_size(actor):.1f}\")\n        if include_components:\n            parts.append(f\"components={component_count(actor)}\")\n        if include_transform:\n            location = actor.get_actor_location()\n            rotation = actor.get_actor_rotation()\n            scale = actor.get_actor_scale3d()\n            parts.append(f\"loc={vector_text(location)}\")\n            parts.append(f\"rot=({rotation.roll:.1f}, {rotation.pitch:.1f}, {rotation.yaw:.1f})\")\n            parts.append(f\"scale={vector_text(scale)}\")\n        unreal.log(\" | \".join(parts))\n\n    remaining = len(selected_actors) - max_actors\n    if remaining > 0:\n        unreal.log(f\"... {remaining} more selected actor(s) hidden by Max Actors\")\n",
+      "created_at": "2026-06-01T00:00:00+00:00",
+      "updated_at": "2026-06-01T00:00:00+00:00",
+      "category": "Debug",
+      "workflows": [
+        "Reports / Handoff",
+        "Scene Cleanup"
+      ],
+      "roles": [
+        "Tech Artist",
+        "Lead / QA",
+        "Pipeline Artist"
+      ],
+      "visibility": "primary"
     }
   ]
 }

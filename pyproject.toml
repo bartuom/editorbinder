@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "editorbinder"
-version = "0.1.0"
+version = "0.1.1"
 description = "Desktop clipboard library for Unreal Engine Python Console tools."
 readme = "README.md"
 requires-python = ">=3.10"

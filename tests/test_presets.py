@@ -44,6 +44,9 @@ class PresetTests(unittest.TestCase):
                 "Set Selected Actors Mobility",
                 "Flatten Selected Actors To Same Z",
                 "Reset Bad Scale On Selected Actors",
+                "Select Actors By Label Text",
+                "Select Actors By Class Name",
+                "Report Selected Actors Summary",
             ],
         )
 
@@ -120,6 +123,9 @@ class PresetTests(unittest.TestCase):
             "Scene Cleanup Audit Report",
             "Find Broken Or Suspicious Actors",
             "Select Same Static Mesh As Selected",
+            "Select Actors By Label Text",
+            "Select Actors By Class Name",
+            "Report Selected Actors Summary",
         }
         by_name = {tool.name: tool for tool in self._seed_tools()}
 

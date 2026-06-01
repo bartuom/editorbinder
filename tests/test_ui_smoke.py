@@ -19,6 +19,7 @@ class UiSmokeTests(unittest.TestCase):
         import tkinter as tk
 
         from unreal_utility_tool.models import CATEGORY_CUSTOM, CATEGORY_TRANSFORM, Tool
+        from unreal_utility_tool import __version__
         from unreal_utility_tool.params import parse_tool_params
         from unreal_utility_tool.settings import AppSettingsStore
         from unreal_utility_tool.storage import ToolLibraryStore
@@ -178,7 +179,7 @@ class UiSmokeTests(unittest.TestCase):
                 self.assertIn("not affiliated with, endorsed by, or sponsored by Epic Games", app._about_text())
                 app._copy_app_info()
                 app_info = root.clipboard_get()
-                self.assertIn("EditorBinder 0.1.0", app_info)
+                self.assertIn(f"EditorBinder {__version__}", app_info)
                 self.assertIn("Author: Bartosz Rozmus", app_info)
                 self.assertIn(str(store.path.parent), app_info)
                 self.assertEqual(app.status_var.get(), "Copied app info")

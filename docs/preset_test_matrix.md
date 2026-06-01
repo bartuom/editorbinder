@@ -2,7 +2,7 @@
 
 Status date: 2026-05-31.
 
-This matrix tracks the 15-tool Free Core seed shipped in `data\tools.json`.
+This matrix tracks the 18-tool Free Core seed shipped in `data\tools.json`.
 
 Legend: `PASS` verified, `TODO` not verified yet, `N/A` not applicable.
 
@@ -23,6 +23,9 @@ Legend: `PASS` verified, `TODO` not verified yet, `N/A` not applicable.
 | Set Selected Actors Mobility | PASS | TODO | PASS | TODO | PASS | UE 5.4 |
 | Flatten Selected Actors To Same Z | TODO | TODO | TODO | TODO | TODO | TODO |
 | Reset Bad Scale On Selected Actors | TODO | TODO | TODO | TODO | TODO | TODO |
+| Select Actors By Label Text | TODO | TODO | TODO | N/A | TODO | TODO |
+| Select Actors By Class Name | TODO | TODO | TODO | N/A | TODO | TODO |
+| Report Selected Actors Summary | TODO | TODO | TODO | N/A | TODO | TODO |
 
 Fresh release QA should cover:
 

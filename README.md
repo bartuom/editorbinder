@@ -95,7 +95,7 @@ the fix-prompt workflow.
 
 ## Bundled Tools
 
-The default library starts with a 15-tool Free Core focused on everyday Unreal
+The default library starts with an 18-tool Free Core focused on everyday Unreal
 scene cleanup, placement, audit, and batch editing:
 
 - scene cleanup audit report,
@@ -112,7 +112,10 @@ scene cleanup, placement, audit, and batch editing:
 - select actors using the same Static Mesh asset,
 - set selected actor mobility,
 - flatten selected actors to the same Z height,
-- reset bad selected actor scale.
+- reset bad selected actor scale,
+- select actors by label text,
+- select actors by class name,
+- report selected actors summary.
 
 The tracked bundled seed is:
 

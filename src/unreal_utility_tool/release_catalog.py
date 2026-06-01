@@ -20,5 +20,8 @@ FREE_CORE_TOOL_IDS = (
     "preset-set-selected-actors-mobility",
     "preset-flatten-selected-actors-to-same-z",
     "preset-reset-bad-scale-on-selected-actors",
+    "preset-select-actors-by-label-text",
+    "preset-select-actors-by-class-name",
+    "preset-report-selected-actors-summary",
 )
 FREE_CORE_COUNT = len(FREE_CORE_TOOL_IDS)
