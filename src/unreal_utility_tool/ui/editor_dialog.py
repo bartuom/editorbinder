@@ -815,13 +815,15 @@ class ToolEditorDialog:
         return "break"
 
     def _current_ai_config(self) -> AiProviderConfig:
+        temperature = _parse_float(self.ai_temperature_var.get(), default=0.2)
+        self.ai_temperature_var.set(f"{temperature:g}")
         return AiProviderConfig(
             provider=self.ai_provider_var.get().strip() or provider_names()[0],
             base_url=self.ai_base_url_var.get().strip(),
             model=self.ai_model_var.get().strip(),
             api_key_env=self.ai_api_key_env_var.get().strip() or "EDITORBINDER_API_KEY",
             timeout_seconds=_parse_positive_int(self.ai_timeout_var.get(), default=45),
-            temperature=_parse_float(self.ai_temperature_var.get(), default=0.2),
+            temperature=temperature,
             max_tokens=_parse_positive_int(self.ai_max_tokens_var.get(), default=3000),
         )
 
