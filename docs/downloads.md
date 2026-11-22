@@ -33,7 +33,7 @@ SmartScreen may show an `Unknown publisher` warning because the app has not
 built Windows app reputation yet.
 
 Only download EditorBinder from the official GitHub Release page. If you trust
-the release asset, choose `More info` / `Więcej informacji`, then
+the release asset, choose `More info` / `Wi?cej informacji`, then
 `Run anyway` / `Uruchom mimo to`.
 
 This warning is expected for early open-source builds. The long-term fix is to
