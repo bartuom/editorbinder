@@ -586,6 +586,21 @@ unreal.log("ok")
                     main_window_module.messagebox.askyesno = lambda *args, **kwargs: True
                     self.assertEqual(app._delete_selected_shortcut(SimpleNamespace(widget=root)), "break")
                     self.assertIsNone(app._tool_by_id(delete_tool.id))
+                    self.assertNotIn(delete_tool.id, app.settings.deleted_preset_ids)
+
+                    # Deleting a core preset tool tombstones it in settings
+                    from unreal_utility_tool.release_catalog import FREE_CORE_TOOL_IDS
+                    core_preset = next(tool for tool in app.tools if tool.id in FREE_CORE_TOOL_IDS)
+                    app._delete_tool(core_preset.id)
+                    self.assertIsNone(app._tool_by_id(core_preset.id))
+                    self.assertIn(core_preset.id, app.settings.deleted_preset_ids)
+                    self.assertIn(core_preset.id, settings_store.load().deleted_preset_ids)
+
+                    # Refreshing bundled presets clears tombstones and restores the tool
+                    app._refresh_bundled_presets()
+                    self.assertEqual(app.settings.deleted_preset_ids, [])
+                    self.assertEqual(settings_store.load().deleted_preset_ids, [])
+                    self.assertIsNotNone(app._tool_by_id(core_preset.id))
                 finally:
                     main_window_module.messagebox.askyesno = original_askyesno
                 app.tools = []
@@ -605,6 +620,43 @@ unreal.log("ok")
                 app._close()
                 self.assertTrue((Path(temp_dir) / "settings.json").exists())
             finally:
+                try:
+                    if root.winfo_exists():
+                        root.destroy()
+                except tk.TclError:
+                    pass
+
+    def test_main_window_warns_on_preserved_load_error(self) -> None:
+        import tkinter as tk
+        from unreal_utility_tool.settings import AppSettingsStore
+        from unreal_utility_tool.storage import ToolLibraryStore
+        from unreal_utility_tool.tk_app import UnrealUtilityApp
+        import unreal_utility_tool.ui.main_window as main_window_module
+
+        with TemporaryDirectory() as temp_dir:
+            store = ToolLibraryStore(Path(temp_dir) / "tools.json")
+            store.save_tools([])
+            store.last_load_error = "Could not load tool library: bad JSON. Backup: tools.corrupt-1.json.bak"
+            settings_store = AppSettingsStore(Path(temp_dir) / "settings.json")
+
+            try:
+                root = tk.Tk()
+            except tk.TclError as exc:
+                self.skipTest(f"tkinter root window is unavailable on this runner: {exc}")
+            root.withdraw()
+            warning_calls = []
+            original_showwarning = main_window_module.messagebox.showwarning
+            try:
+                main_window_module.messagebox.showwarning = (
+                    lambda title, message, **kwargs: warning_calls.append((title, message))
+                )
+                app = UnrealUtilityApp(root, store, settings_store=settings_store)
+                self.assertEqual(len(warning_calls), 1)
+                self.assertEqual(warning_calls[0][0], "Library Load Problem")
+                self.assertIn("Could not load tool library", warning_calls[0][1])
+                app._close()
+            finally:
+                main_window_module.messagebox.showwarning = original_showwarning
                 try:
                     if root.winfo_exists():
                         root.destroy()

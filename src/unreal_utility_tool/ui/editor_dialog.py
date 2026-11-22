@@ -780,6 +780,18 @@ class ToolEditorDialog:
             bundled_tools = default_presets()
         except Exception:
             bundled_tools = []
+
+        if not bundled_tools:
+            bundled_tools = list(self.existing_tools)
+
+        if not bundled_tools:
+            try:
+                from ..storage import load_release_seed_tools
+
+                bundled_tools = load_release_seed_tools()
+            except Exception:
+                bundled_tools = []
+
         examples = select_prompt_examples(request, bundled_tools, limit=3)
         if examples:
             return examples

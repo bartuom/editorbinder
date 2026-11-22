@@ -402,6 +402,146 @@ class ToolLibraryStoreTests(unittest.TestCase):
             with _patched_runtime(frozen=True, executable=app_root / "EditorBinder.exe", meipass=resource_root):
                 self.assertEqual(storage.app_file_path("LICENSE.txt"), license_path)
 
+    def test_refresh_bundled_presets_falls_back_to_release_seed_and_restores(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            app_root = Path(temp_dir) / "app"
+            seed_path = app_root / "data" / "tools.json"
+            runtime_path = app_root / "data" / "user_tools.json"
+            seed_tool = Tool(
+                id="preset-seed-1",
+                name="Seed Tool 1",
+                description="Seed Description",
+                tags=["seed"],
+                code="print('seed1')",
+                created_at="2026-05-26T00:00:00+00:00",
+                updated_at="2026-05-26T00:00:00+00:00",
+                category=CATEGORY_TRANSFORM,
+            )
+            ToolLibraryStore(seed_path).save_tools([seed_tool])
+            ToolLibraryStore(runtime_path).save_tools([])
+
+            with _patched_project_root(app_root):
+                with _patched_runtime(frozen=False, executable=app_root / "python.exe"):
+                    result = storage.refresh_bundled_presets(runtime_path)
+
+            loaded = ToolLibraryStore(runtime_path).load_tools()
+            self.assertEqual(result.added_count, 1)
+            self.assertEqual([tool.id for tool in loaded], ["preset-seed-1"])
+            self.assertEqual(loaded[0].name, "Seed Tool 1")
+
+    def test_ensure_default_storage_seeded_preserves_last_load_error_and_creates_corrupt_backup(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            app_root = Path(temp_dir) / "app"
+            seed_path = app_root / "data" / "tools.json"
+            runtime_path = app_root / "data" / "user_tools.json"
+            seed_tool = Tool.create(name="Seed Tool", code="print('seed')")
+            ToolLibraryStore(seed_path).save_tools([seed_tool])
+            runtime_path.parent.mkdir(parents=True, exist_ok=True)
+            runtime_path.write_text("{corrupt-json", encoding="utf-8")
+
+            store = ToolLibraryStore(runtime_path)
+            with _patched_project_root(app_root):
+                with _patched_runtime(frozen=False, executable=app_root / "python.exe"):
+                    storage.ensure_default_storage_seeded(runtime_path, store=store)
+
+            backups = list(runtime_path.parent.glob("user_tools.corrupt-*.json.bak"))
+            self.assertEqual(len(backups), 1)
+            self.assertIn("Could not load tool library", store.last_load_error)
+            self.assertIn(backups[0].name, store.last_load_error)
+            loaded = ToolLibraryStore(runtime_path).load_tools()
+            self.assertEqual([tool.name for tool in loaded], ["Seed Tool"])
+
+    def test_ensure_default_storage_seeded_respects_ignored_and_deleted_preset_ids(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            app_root = Path(temp_dir) / "app"
+            seed_path = app_root / "data" / "tools.json"
+            runtime_path = app_root / "data" / "user_tools.json"
+            seed1 = Tool(
+                id="preset-keep",
+                name="Keep",
+                description="desc",
+                tags=[],
+                code="print('keep')",
+                created_at="2026-05-26T00:00:00+00:00",
+                updated_at="2026-05-26T00:00:00+00:00",
+                category=CATEGORY_TRANSFORM,
+            )
+            seed2 = Tool(
+                id="preset-deleted",
+                name="Deleted",
+                description="desc",
+                tags=[],
+                code="print('deleted')",
+                created_at="2026-05-26T00:00:00+00:00",
+                updated_at="2026-05-26T00:00:00+00:00",
+                category=CATEGORY_TRANSFORM,
+            )
+            ToolLibraryStore(seed_path).save_tools([seed1, seed2])
+            ToolLibraryStore(runtime_path).save_tools([seed1])
+
+            # With explicit ignored_ids
+            with _patched_project_root(app_root):
+                with _patched_runtime(frozen=False, executable=app_root / "python.exe"):
+                    storage.ensure_default_storage_seeded(runtime_path, ignored_ids={"preset-deleted"})
+
+            loaded = ToolLibraryStore(runtime_path).load_tools()
+            self.assertEqual([tool.id for tool in loaded], ["preset-keep"])
+
+            # With settings.json on disk and ignored_ids=None
+            settings_path = runtime_path.parent / "settings.json"
+            settings_path.write_text(json.dumps({"deleted_preset_ids": ["preset-deleted"]}), encoding="utf-8")
+            with _patched_project_root(app_root):
+                with _patched_runtime(frozen=False, executable=app_root / "python.exe"):
+                    storage.ensure_default_storage_seeded(runtime_path)
+
+            loaded_again = ToolLibraryStore(runtime_path).load_tools()
+            self.assertEqual([tool.id for tool in loaded_again], ["preset-keep"])
+
+    def test_ensure_default_storage_seeded_auto_merges_new_release_seed_tool_not_in_deleted_preset_ids(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            app_root = Path(temp_dir) / "app"
+            seed_path = app_root / "data" / "tools.json"
+            runtime_path = app_root / "data" / "user_tools.json"
+            seed1 = Tool(
+                id="preset-1",
+                name="Tool 1",
+                description="desc",
+                tags=[],
+                code="print('1')",
+                created_at="2026-05-26T00:00:00+00:00",
+                updated_at="2026-05-26T00:00:00+00:00",
+                category=CATEGORY_TRANSFORM,
+            )
+            seed2_deleted = Tool(
+                id="preset-2",
+                name="Tool 2",
+                description="desc",
+                tags=[],
+                code="print('2')",
+                created_at="2026-05-26T00:00:00+00:00",
+                updated_at="2026-05-26T00:00:00+00:00",
+                category=CATEGORY_TRANSFORM,
+            )
+            seed3_new = Tool(
+                id="preset-3",
+                name="Tool 3",
+                description="desc",
+                tags=[],
+                code="print('3')",
+                created_at="2026-05-26T00:00:00+00:00",
+                updated_at="2026-05-26T00:00:00+00:00",
+                category=CATEGORY_TRANSFORM,
+            )
+            ToolLibraryStore(seed_path).save_tools([seed1, seed2_deleted, seed3_new])
+            ToolLibraryStore(runtime_path).save_tools([seed1])
+
+            with _patched_project_root(app_root):
+                with _patched_runtime(frozen=False, executable=app_root / "python.exe"):
+                    storage.ensure_default_storage_seeded(runtime_path, ignored_ids={"preset-2"})
+
+            loaded = ToolLibraryStore(runtime_path).load_tools()
+            self.assertEqual([tool.id for tool in loaded], ["preset-1", "preset-3"])
+
 
 class _patched_runtime:
     def __init__(self, *, frozen: bool, executable: Path, meipass: Path | None = None) -> None:

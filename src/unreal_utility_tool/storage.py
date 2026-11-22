@@ -225,19 +225,45 @@ def resolve_release_seed_path() -> Path:
     return app_root() / "data" / RELEASE_SEED_FILENAME
 
 
-def ensure_default_storage_seeded(path: str | Path | None = None) -> Path:
-    storage_path = Path(path) if path is not None else resolve_default_storage_path()
+def ensure_default_storage_seeded(
+    path: str | Path | None = None,
+    store: ToolLibraryStore | None = None,
+    ignored_ids: set[str] | None = None,
+) -> Path:
+    storage_path = Path(path) if path is not None else (store.path if store is not None else resolve_default_storage_path())
+    target_store = store if store is not None else ToolLibraryStore(storage_path)
     if storage_path.exists():
-        _merge_missing_release_seed_tools(storage_path)
-        return storage_path
+        _merge_missing_release_seed_tools(storage_path, store=target_store, ignored_ids=ignored_ids)
+        if storage_path.exists():
+            return storage_path
 
     tools = _load_release_seed_tools(storage_path)
     if not tools:
         from .presets import default_presets
 
-        tools = default_presets()
+        try:
+            tools = default_presets()
+        except Exception:
+            tools = []
 
-    ToolLibraryStore(storage_path).save_tools(tools)
+    effective_ignored: set[str] | None = set(ignored_ids) if ignored_ids is not None else None
+    if effective_ignored is None:
+        settings_path = storage_path.parent / "settings.json"
+        if settings_path.exists():
+            try:
+                from .settings import AppSettingsStore
+
+                settings = AppSettingsStore(settings_path).load()
+                effective_ignored = set(settings.deleted_preset_ids or [])
+            except Exception:
+                effective_ignored = set()
+        else:
+            effective_ignored = set()
+
+    if effective_ignored:
+        tools = [tool for tool in tools if tool.id not in effective_ignored]
+
+    target_store.save_tools(tools)
     return storage_path
 
 
@@ -285,35 +311,66 @@ def refresh_bundled_presets(
     )
 
 
-def _merge_missing_release_seed_tools(storage_path: Path) -> None:
+def _merge_missing_release_seed_tools(
+    storage_path: Path,
+    store: ToolLibraryStore | None = None,
+    ignored_ids: set[str] | None = None,
+) -> None:
     seed_tools = _load_release_seed_tools(storage_path)
     if not seed_tools:
         return
 
-    store = ToolLibraryStore(storage_path)
-    existing_tools = store.load_tools()
+    target_store = store if store is not None else ToolLibraryStore(storage_path)
+    existing_tools = target_store.load_tools()
+
+    effective_ignored: set[str] | None = set(ignored_ids) if ignored_ids is not None else None
+    if effective_ignored is None:
+        settings_path = storage_path.parent / "settings.json"
+        if settings_path.exists():
+            try:
+                from .settings import AppSettingsStore
+
+                settings = AppSettingsStore(settings_path).load()
+                effective_ignored = set(settings.deleted_preset_ids or [])
+            except Exception:
+                effective_ignored = set()
+        else:
+            effective_ignored = set()
+
     existing_ids = {tool.id for tool in existing_tools}
-    missing_tools = [tool for tool in seed_tools if tool.id not in existing_ids]
-    if missing_tools:
-        store.save_tools(existing_tools + missing_tools)
+    missing_tools = [
+        tool
+        for tool in seed_tools
+        if tool.id not in existing_ids and tool.id not in (effective_ignored or set())
+    ]
+    if missing_tools or target_store.last_load_error:
+        target_store.save_tools(existing_tools + missing_tools)
 
 
 def _load_bundled_preset_tools(storage_path: Path) -> list[Tool]:
     try:
         from .presets import default_presets
 
-        return default_presets()
+        presets = default_presets()
+        if presets:
+            return presets
     except Exception:
-        return _load_release_seed_tools(storage_path)
+        pass
+    return _load_release_seed_tools(storage_path)
 
 
-def _load_release_seed_tools(storage_path: Path) -> list[Tool]:
+def load_release_seed_tools(storage_path: Path | None = None) -> list[Tool]:
     seed_path = resolve_release_seed_path()
     try:
-        if not seed_path.exists() or seed_path.resolve() == storage_path.resolve():
+        if not seed_path.exists():
+            return []
+        if storage_path is not None and seed_path.resolve() == storage_path.resolve():
             return []
         payload = json.loads(seed_path.read_text(encoding="utf-8"))
         raw_tools = ToolLibraryStore(seed_path)._extract_tool_payload(payload)
         return [Tool.from_dict(raw_tool) for raw_tool in raw_tools]
     except (json.JSONDecodeError, OSError, TypeError, ValueError):
         return []
+
+
+_load_release_seed_tools = load_release_seed_tools

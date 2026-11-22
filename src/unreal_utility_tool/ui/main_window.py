@@ -23,6 +23,7 @@ from ..models import (
 )
 from ..params import ParamRenderError, ToolParam, parse_tool_params, render_tool_code, validate_param_value
 from ..prompts import build_fix_prompt
+from ..release_catalog import FREE_CORE_TOOL_IDS
 from ..settings import AppSettingsStore, resolve_default_settings_path
 from ..storage import ToolLibraryStore, app_file_path, app_root, refresh_bundled_presets
 from ..theme import (
@@ -255,7 +256,10 @@ class UnrealUtilityApp:
         self.settings_store = settings_store or AppSettingsStore(resolve_default_settings_path())
         self.settings = self.settings_store.load()
         self._normalize_detail_section_state()
+        initial_load_error = self.store.last_load_error
         self.tools = self.store.load_tools()
+        if initial_load_error and not self.store.last_load_error:
+            self.store.last_load_error = initial_load_error
         self.filtered_tools: list[Tool] = []
         self.current_tool_id = ""
         self.tool_rows: list[tk.Widget] = []
@@ -2579,6 +2583,9 @@ class UnrealUtilityApp:
             self.status_var.set("Bundled preset refresh failed.")
             return
 
+        self.settings.deleted_preset_ids = []
+        self.settings_store.save(self.settings)
+
         self.tools = result.refreshed_tools
         if self.current_tool_id and self._tool_by_id(self.current_tool_id) is None:
             self.current_tool_id = self.tools[0].id if self.tools else ""
@@ -2745,6 +2752,12 @@ class UnrealUtilityApp:
             return
         if not messagebox.askyesno("Delete Tool?", f"Delete '{tool.name}'?", parent=self.root):
             return
+        if tool.id in FREE_CORE_TOOL_IDS:
+            if self.settings.deleted_preset_ids is None:
+                self.settings.deleted_preset_ids = []
+            if tool.id not in self.settings.deleted_preset_ids:
+                self.settings.deleted_preset_ids.append(tool.id)
+                self.settings_store.save(self.settings)
         self.tools = [existing for existing in self.tools if existing.id != tool.id]
         self.current_tool_id = self.tools[0].id if self.tools else ""
         self._save_and_refresh()

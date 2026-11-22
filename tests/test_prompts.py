@@ -152,6 +152,37 @@ class PromptTests(unittest.TestCase):
 
         self.assertIn("[PASTE UNREAL PYTHON ERROR HERE]", prompt)
 
+    def test_prompt_examples_fallback_when_default_presets_is_empty(self) -> None:
+        from types import SimpleNamespace
+        from unreal_utility_tool.ui.editor_dialog import ToolEditorDialog
+
+        # Fallback to existing_tools
+        existing_tool = Tool.create(
+            name="Custom Align Tool",
+            description="Align selected actors to axis.",
+            tags=["align"],
+            category=CATEGORY_TRANSFORM,
+            code="import unreal\nunreal.log('align')",
+        )
+        dialog_stub = SimpleNamespace(
+            existing_tools=[existing_tool],
+            prompt_example_code="",
+        )
+        examples = ToolEditorDialog._prompt_examples_for_request(dialog_stub, "align selected actors to axis")
+        self.assertTrue(len(examples) > 0)
+        self.assertEqual(examples[0].name, "Custom Align Tool")
+        self.assertIsInstance(examples[0], PromptExample)
+
+        # When existing_tools is empty, fall back to seed tools from resolve_release_seed_path
+        empty_stub = SimpleNamespace(
+            existing_tools=[],
+            prompt_example_code="",
+        )
+        seed_examples = ToolEditorDialog._prompt_examples_for_request(empty_stub, "scene cleanup audit report")
+        self.assertTrue(len(seed_examples) > 0)
+        self.assertIn("Audit", seed_examples[0].name)
+        self.assertIsInstance(seed_examples[0], PromptExample)
+
 
 if __name__ == "__main__":
     unittest.main()
