@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass, field
 from typing import Mapping
@@ -95,7 +96,7 @@ def _rewrite_first_param_assignments(
 
     seen: set[str] = set()
     lines: list[str] = []
-    assignment_pattern = re.compile(r"^(\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*=\s*)(.*?)(\s*(?:#.*)?)$")
+    assignment_pattern = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)(\s*=\s*)(?!=)(.*?)(\s*(?:#.*)?)$")
 
     for line in code.splitlines(keepends=True):
         newline = ""
@@ -112,14 +113,14 @@ def _rewrite_first_param_assignments(
             lines.append(line)
             continue
 
-        name = match.group(2)
+        name = match.group(1)
         if name not in params or name in seen:
             lines.append(line)
             continue
 
         raw_value = values.get(name, params[name].default)
         replacement = _format_value(raw_value, params[name])
-        lines.append(f"{match.group(1)}{name}{match.group(3)}{replacement}{match.group(5)}{newline}")
+        lines.append(f"{name}{match.group(2)}{replacement}{match.group(4)}{newline}")
         seen.add(name)
 
     return "".join(lines)
@@ -196,4 +197,7 @@ def _validate_numeric_range(value: float, param: ToolParam) -> None:
 
 
 def _parse_float_text(value: str) -> float:
-    return float(str(value).strip().replace(",", "."))
+    number = float(str(value).strip().replace(",", "."))
+    if not math.isfinite(number):
+        raise ValueError("Value must be a finite number.")
+    return number

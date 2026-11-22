@@ -108,6 +108,35 @@ import unreal
         self.assertIn("min_scale = 2.5", rendered)
         self.assertIn("min_scale = min_scale + 1", rendered)
 
+    def test_rewrite_preserves_indented_local_variables(self) -> None:
+        code = (
+            "# Param: count | int | 5 | Count\n"
+            "def process(items):\n"
+            "    count = len(items)\n"
+            "    return count\n"
+            "count = {{count}}\n"
+        )
+        rendered = render_tool_code(code, {"count": "42"})
+        self.assertIn("    count = len(items)", rendered)
+        self.assertIn("count = 42", rendered)
+
+    def test_rewrite_ignores_comparison_operators(self) -> None:
+        code = (
+            "# Param: count | int | 5 | Count\n"
+            "count = {{count}}\n"
+            "is_default = (count == 5)\n"
+        )
+        rendered = render_tool_code(code, {"count": "42"})
+        self.assertIn("count == 5", rendered)
+        self.assertIn("count = 42", rendered)
+
+    def test_render_tool_code_rejects_nan_and_inf(self) -> None:
+        code = "# Param: scale | float | 1.0 | Scale | min=0.1 | max=10.0\nscale = {{scale}}\n"
+        for invalid in ("nan", "NaN", "inf", "-inf", "+inf", "infinity", "-infinity"):
+            with self.subTest(val=invalid):
+                with self.assertRaises(ParamRenderError):
+                    render_tool_code(code, {"scale": invalid})
+
 
 if __name__ == "__main__":
     unittest.main()
