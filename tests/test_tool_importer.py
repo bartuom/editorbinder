@@ -12,6 +12,8 @@ from unreal_utility_tool.tool_importer import (
     IMPORT_POLICY_REPLACE,
     IMPORT_POLICY_SKIP,
     ToolImportBatch,
+    _import_tools_from_zip,
+    _zip_pack_payload_name,
     apply_import_policy,
     import_tools_from_paths,
     import_tools_from_text,
@@ -268,6 +270,127 @@ unreal.log("ok")
         self.assertEqual(tools, [])
         self.assertEqual(len(errors), 1)
         self.assertIn("editorbinder-pack.json", errors[0])
+
+    def test_import_text_file_with_utf8_bom(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "bom_tool.txt"
+            content = (
+                "<<<UUT_NAME>>>\n"
+                "BOM Marker Tool\n"
+                "<<<UUT_NOTES>>>\n"
+                "Created with BOM\n"
+                "<<<UUT_CODE>>>\n"
+                "import unreal\n"
+                "unreal.log('bom')\n"
+                "<<<UUT_END>>>\n"
+            )
+            file_path.write_bytes(content.encode("utf-8-sig"))
+
+            tools, errors = import_tools_from_paths([file_path])
+
+            self.assertEqual(errors, [])
+            self.assertEqual(len(tools), 1)
+            self.assertEqual(tools[0].name, "BOM Marker Tool")
+            self.assertEqual(tools[0].description, "Created with BOM")
+            self.assertFalse(tools[0].name.startswith("\ufeff"))
+
+            py_path = Path(temp_dir) / "bom_script.py"
+            py_path.write_bytes("import unreal\nunreal.log('script')\n".encode("utf-8-sig"))
+            py_tools, py_errors = import_tools_from_paths([py_path])
+            self.assertEqual(py_errors, [])
+            self.assertEqual(len(py_tools), 1)
+            self.assertEqual(py_tools[0].name, "Bom Script")
+
+    def test_import_json_file_with_utf8_bom(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "bom_tool.json"
+            payload = {
+                "name": "BOM JSON Tool",
+                "code": "import unreal\nunreal.log('json_bom')",
+            }
+            file_path.write_bytes(json.dumps(payload).encode("utf-8-sig"))
+
+            tools, errors = import_tools_from_paths([file_path])
+
+            self.assertEqual(errors, [])
+            self.assertEqual(len(tools), 1)
+            self.assertEqual(tools[0].name, "BOM JSON Tool")
+
+    def test_import_invalid_utf8_reports_decode_error(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "invalid.py"
+            file_path.write_bytes(b"\x80\x81invalid")
+
+            tools, errors = import_tools_from_paths([file_path])
+
+            self.assertEqual(tools, [])
+            self.assertEqual(len(errors), 1)
+            self.assertIn("invalid.py", errors[0])
+            self.assertTrue(
+                "codec can't decode" in errors[0] or "UnicodeDecodeError" in errors[0] or "decode" in errors[0]
+            )
+
+    def test_import_invalid_utf8_json_reports_decode_error(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / "invalid.json"
+            file_path.write_bytes(b"\x80\x81{\"name\": \"test\"}")
+
+            tools, errors = import_tools_from_paths([file_path])
+
+            self.assertEqual(tools, [])
+            self.assertEqual(len(errors), 1)
+            self.assertIn("invalid.json", errors[0])
+            self.assertTrue(
+                "codec can't decode" in errors[0] or "UnicodeDecodeError" in errors[0] or "decode" in errors[0]
+            )
+
+    def test_import_invalid_utf8_zip_payload_reports_decode_error(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "invalid_payload.zip"
+            with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                archive.writestr("editorbinder-pack.json", b"\x80\x81{\"tools\": []}")
+
+            tools, errors = import_tools_from_paths([path])
+
+            self.assertEqual(tools, [])
+            self.assertEqual(len(errors), 1)
+            self.assertIn("invalid_payload.zip", errors[0])
+            self.assertTrue(
+                "codec can't decode" in errors[0] or "UnicodeDecodeError" in errors[0] or "decode" in errors[0]
+            )
+
+    def test_zip_with_path_traversal_is_rejected(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "malicious.zip"
+            with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                archive.writestr("../../etc/passwd", "root:x:0:0:::")
+                archive.writestr("editorbinder-pack.json", json.dumps({"tools": []}))
+
+            tools, errors = import_tools_from_paths([path])
+
+            self.assertEqual(tools, [])
+            self.assertEqual(len(errors), 1)
+            self.assertIn("Unsafe archive member path", errors[0])
+            with self.assertRaises(ValueError):
+                _import_tools_from_zip(path)
+            with zipfile.ZipFile(path) as archive:
+                with self.assertRaises(ValueError):
+                    _zip_pack_payload_name(archive)
+
+    def test_zip_with_leading_slash_traversal_is_rejected(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "absolute_member.zip"
+            with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                archive.writestr("/etc/passwd", "root:x:0:0:::")
+                archive.writestr("editorbinder-pack.json", json.dumps({"tools": []}))
+
+            tools, errors = import_tools_from_paths([path])
+
+            self.assertEqual(tools, [])
+            self.assertEqual(len(errors), 1)
+            self.assertIn("Unsafe archive member path", errors[0])
+            with self.assertRaises(ValueError):
+                _import_tools_from_zip(path)
 
     def test_import_batch_defaults_to_skip_duplicates(self) -> None:
         self.assertEqual(ToolImportBatch([]).policy, IMPORT_POLICY_SKIP)
