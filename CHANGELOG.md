@@ -2,6 +2,24 @@
 
 All notable user-facing changes for EditorBinder are documented here.
 
+## Unreleased
+
+### Added
+
+- Expanded the bundled Free Core catalog from 18 to 21 tools:
+  - Select Actors By Material
+  - Batch Update Actor Tags with undo support
+  - Audit Missing Material Slots on selected actors
+- Added focused Ruff static checks to CI and a `dev` extra for local development.
+
+### Fixed
+
+- Corrected AI endpoint URL construction when base URLs include query parameters.
+- Redacted API keys from provider error messages and rejected token-truncated AI responses.
+- Hardened AI marker parsing and temperature validation.
+- Recovered saved window positions across monitor changes and cancelled pending UI callbacks on close.
+- Excluded generated Python distribution metadata from source ZIP releases.
+
 ## 0.1.1 - 2026-06-01
 
 ### Added

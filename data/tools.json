@@ -440,6 +440,85 @@
         "Pipeline Artist"
       ],
       "visibility": "primary"
+    },
+    {
+      "id": "preset-select-actors-by-material",
+      "name": "Select Actors By Material",
+      "description": "Finds and selects level actors whose StaticMeshComponents use a material matching a name or asset path.",
+      "tags": [
+        "actors",
+        "selection",
+        "material",
+        "assets",
+        "params"
+      ],
+      "category": "Selection",
+      "workflows": [
+        "Selection / Filtering",
+        "Material / Asset Management"
+      ],
+      "roles": [
+        "Level Designer",
+        "Environment Artist",
+        "Tech Artist"
+      ],
+      "visibility": "primary",
+      "created_at": "2026-11-22T15:43:32+00:00",
+      "updated_at": "2026-11-22T15:43:32+00:00",
+      "code": "# Param: material_query | str | M_Concrete | Material Name Or Path\n# Param: match_mode | enum | contains | Match Mode | options=contains,exact\n# Param: case_sensitive | bool | False | Case Sensitive\n# Param: include_hidden | bool | True | Include Hidden Actors\n# Param: append_to_selection | bool | False | Append To Current Selection\nimport unreal\n\nmaterial_query = {{material_query}}\nmatch_mode = {{match_mode}}\ncase_sensitive = {{case_sensitive}}\ninclude_hidden = {{include_hidden}}\nappend_to_selection = {{append_to_selection}}\n\nactor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nall_actors = [actor for actor in actor_subsystem.get_all_level_actors() if actor is not None]\nquery = str(material_query).strip()\nmode = str(match_mode).strip().lower()\nif mode not in (\"contains\", \"exact\"):\n    mode = \"contains\"\n\ndef is_actor_hidden(actor):\n    hidden = False\n    for method_name in (\"is_hidden_ed\", \"get_is_temporarily_hidden_in_editor\"):\n        try:\n            hidden = hidden or bool(getattr(actor, method_name)())\n        except Exception:\n            pass\n    try:\n        hidden = hidden or bool(actor.get_editor_property(\"hidden\"))\n    except Exception:\n        pass\n    return hidden\n\ndef actor_components(actor):\n    try:\n        return list(actor.get_components_by_class(unreal.StaticMeshComponent))\n    except Exception:\n        return []\n\ndef component_material_count(component):\n    try:\n        count = max(0, int(component.get_num_materials()))\n        if count:\n            return count\n    except Exception:\n        pass\n    try:\n        mesh = component.get_editor_property(\"static_mesh\")\n        return len(list(mesh.get_editor_property(\"static_materials\") or [])) if mesh else 0\n    except Exception:\n        return 0\n\ndef component_material(component, index):\n    try:\n        material = component.get_material(index)\n        if material is not None:\n            return material\n    except Exception:\n        pass\n    try:\n        overrides = list(component.get_editor_property(\"override_materials\") or [])\n        if index < len(overrides) and overrides[index] is not None:\n            return overrides[index]\n    except Exception:\n        pass\n    try:\n        mesh = component.get_editor_property(\"static_mesh\")\n        return mesh.get_material(index) if mesh else None\n    except Exception:\n        return None\n\ndef material_matches(material, query_text):\n    candidates = []\n    for getter_name in (\"get_name\", \"get_path_name\"):\n        try:\n            candidates.append(str(getattr(material, getter_name)()))\n        except Exception:\n            pass\n    if not candidates:\n        candidates = [str(material)]\n    if not case_sensitive:\n        candidates = [value.casefold() for value in candidates]\n        query_text = query_text.casefold()\n    if mode == \"exact\":\n        return query_text in candidates\n    return any(query_text in value for value in candidates)\n\ndef unique_actors(actors):\n    result = []\n    for actor in actors:\n        if actor is not None and actor not in result:\n            result.append(actor)\n    return result\n\nif not query:\n    unreal.log_warning(\"Material Name Or Path is empty.\")\nelse:\n    candidates = all_actors if include_hidden else [actor for actor in all_actors if not is_actor_hidden(actor)]\n    matches = []\n    scanned_components = 0\n    matched_components = 0\n    for actor in candidates:\n        actor_matches = False\n        for component in actor_components(actor):\n            scanned_components += 1\n            for slot_index in range(component_material_count(component)):\n                material = component_material(component, slot_index)\n                if material is not None and material_matches(material, query):\n                    matched_components += 1\n                    actor_matches = True\n                    break\n        if actor_matches:\n            matches.append(actor)\n\n    selected = matches\n    if append_to_selection:\n        selected = unique_actors(list(actor_subsystem.get_selected_level_actors()) + matches)\n    actor_subsystem.set_selected_level_actors(selected)\n    unreal.log(f\"Selected {len(matches)} actor(s) using material query '{query}' ({mode}). Total selection={len(selected)}, actors scanned={len(candidates)}, StaticMeshComponents scanned={scanned_components}, matching components={matched_components}.\")\n"
+    },
+    {
+      "id": "preset-batch-update-actor-tags",
+      "name": "Batch Update Actor Tags",
+      "description": "Adds, removes, or replaces Actor Tags on the current selection with undo support.",
+      "tags": [
+        "actors",
+        "metadata",
+        "batch-edit",
+        "tags",
+        "params"
+      ],
+      "category": "Editing",
+      "workflows": [
+        "Batch Editing",
+        "Actor Metadata"
+      ],
+      "roles": [
+        "Level Designer",
+        "Tech Artist",
+        "Pipeline Artist"
+      ],
+      "visibility": "primary",
+      "created_at": "2026-11-22T15:43:32+00:00",
+      "updated_at": "2026-11-22T15:43:32+00:00",
+      "code": "# Param: tag_names | str | Review,NeedsCollision | Tags (comma-separated)\n# Param: operation | enum | add | Operation | options=add,remove,replace\nimport unreal\n\ntag_names = {{tag_names}}\noperation = {{operation}}\n\nactor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nselected_actors = [actor for actor in actor_subsystem.get_selected_level_actors() if actor is not None]\nrequested_tags = [part.strip() for part in str(tag_names).replace(\";\", \",\").split(\",\") if part.strip()]\nmode = str(operation).strip().lower()\nif mode not in (\"add\", \"remove\", \"replace\"):\n    mode = \"add\"\n\ndef tag_key(value):\n    return str(value).strip().casefold()\n\ndef unique_names(values):\n    result = []\n    seen = set()\n    for value in values:\n        text = str(value).strip()\n        key = tag_key(text)\n        if text and key not in seen:\n            result.append(text)\n            seen.add(key)\n    return result\n\ndef actor_label(actor):\n    try:\n        return actor.get_actor_label()\n    except Exception:\n        return actor.get_name()\n\nif not selected_actors:\n    unreal.log_warning(\"No actors are selected.\")\nelif not requested_tags:\n    unreal.log_warning(\"Tags is empty. Enter one or more comma-separated tag names.\")\nelse:\n    changed_actors = 0\n    unchanged_actors = 0\n    failed_actors = 0\n    with unreal.ScopedEditorTransaction(\"Batch Update Actor Tags\"):\n        for actor in selected_actors:\n            try:\n                current_tags = [str(tag) for tag in list(actor.get_editor_property(\"tags\") or [])]\n                if mode == \"replace\":\n                    new_tags = unique_names(requested_tags)\n                elif mode == \"remove\":\n                    remove_keys = {tag_key(tag) for tag in requested_tags}\n                    new_tags = [tag for tag in current_tags if tag_key(tag) not in remove_keys]\n                else:\n                    new_tags = unique_names(current_tags + requested_tags)\n                if new_tags == current_tags:\n                    unchanged_actors += 1\n                    continue\n                actor.modify()\n                actor.set_editor_property(\"tags\", [unreal.Name(tag) for tag in new_tags])\n                changed_actors += 1\n            except Exception as exc:\n                failed_actors += 1\n                unreal.log_warning(f\"Actor Tags failed for {actor_label(actor)}: {exc}\")\n    unreal.log(f\"Batch Actor Tags operation '{mode}' completed. Changed={changed_actors}, unchanged={unchanged_actors}, failed={failed_actors}, selected actors={len(selected_actors)}.\")\n"
+    },
+    {
+      "id": "preset-audit-missing-material-slots",
+      "name": "Audit Missing Material Slots",
+      "description": "Finds StaticMeshComponent material slots with no assigned material on selected actors and can select affected actors.",
+      "tags": [
+        "actors",
+        "audit",
+        "materials",
+        "qa",
+        "params"
+      ],
+      "category": "Debug",
+      "workflows": [
+        "Scene Cleanup",
+        "Material / Asset Management",
+        "Reports / Handoff"
+      ],
+      "roles": [
+        "Tech Artist",
+        "Lead / QA",
+        "Environment Artist"
+      ],
+      "visibility": "primary",
+      "created_at": "2026-11-22T15:43:32+00:00",
+      "updated_at": "2026-11-22T15:43:32+00:00",
+      "code": "# Param: include_hidden | bool | True | Include Hidden Actors\n# Param: select_affected_actors | bool | False | Select Affected Actors\n# Param: max_report_items | int | 50 | Max Report Items | min=1 | max=500 | step=1\nimport unreal\n\ninclude_hidden = {{include_hidden}}\nselect_affected_actors = {{select_affected_actors}}\nmax_report_items = {{max_report_items}}\n\nactor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)\nselected_actors = [actor for actor in actor_subsystem.get_selected_level_actors() if actor is not None]\nmax_report_items = max(1, min(500, int(max_report_items)))\n\ndef actor_label(actor):\n    try:\n        return actor.get_actor_label()\n    except Exception:\n        return actor.get_name()\n\ndef is_actor_hidden(actor):\n    hidden = False\n    for method_name in (\"is_hidden_ed\", \"get_is_temporarily_hidden_in_editor\"):\n        try:\n            hidden = hidden or bool(getattr(actor, method_name)())\n        except Exception:\n            pass\n    try:\n        hidden = hidden or bool(actor.get_editor_property(\"hidden\"))\n    except Exception:\n        pass\n    return hidden\n\ndef component_material_count(component):\n    try:\n        count = max(0, int(component.get_num_materials()))\n        if count:\n            return count\n    except Exception:\n        pass\n    try:\n        mesh = component.get_editor_property(\"static_mesh\")\n        return len(list(mesh.get_editor_property(\"static_materials\") or [])) if mesh else 0\n    except Exception:\n        return 0\n\ndef component_material(component, index):\n    try:\n        material = component.get_material(index)\n        if material is not None:\n            return material\n    except Exception:\n        pass\n    try:\n        overrides = list(component.get_editor_property(\"override_materials\") or [])\n        if index < len(overrides) and overrides[index] is not None:\n            return overrides[index]\n    except Exception:\n        pass\n    try:\n        mesh = component.get_editor_property(\"static_mesh\")\n        return mesh.get_material(index) if mesh else None\n    except Exception:\n        return None\n\nif not selected_actors:\n    unreal.log_warning(\"Select one or more actors before running this material audit.\")\nelse:\n    candidates = selected_actors if include_hidden else [actor for actor in selected_actors if not is_actor_hidden(actor)]\n    missing_slots = []\n    affected_actors = []\n    scanned_components = 0\n    scanned_slots = 0\n    for actor in candidates:\n        try:\n            components = list(actor.get_components_by_class(unreal.StaticMeshComponent))\n        except Exception:\n            components = []\n        actor_has_missing = False\n        for component in components:\n            scanned_components += 1\n            for slot_index in range(component_material_count(component)):\n                scanned_slots += 1\n                if component_material(component, slot_index) is None:\n                    actor_has_missing = True\n                    missing_slots.append((actor_label(actor), component.get_name(), slot_index))\n        if actor_has_missing and actor not in affected_actors:\n            affected_actors.append(actor)\n    for actor_name, component_name, slot_index in missing_slots[:max_report_items]:\n        unreal.log_warning(f\"Missing material: actor={actor_name}, component={component_name}, slot={slot_index}.\")\n    if len(missing_slots) > max_report_items:\n        unreal.log_warning(f\"Additional missing slots omitted from log: {len(missing_slots) - max_report_items}.\")\n    if select_affected_actors:\n        actor_subsystem.set_selected_level_actors(affected_actors)\n    if missing_slots:\n        unreal.log_warning(f\"Missing material audit found {len(missing_slots)} empty slot(s) across {len(affected_actors)} actor(s). Components scanned={scanned_components}, slots scanned={scanned_slots}.\")\n    else:\n        unreal.log(f\"Missing material audit passed for {len(candidates)} actor(s). Components scanned={scanned_components}, slots scanned={scanned_slots}.\")\n"
     }
   ]
 }

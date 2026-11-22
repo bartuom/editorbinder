@@ -15,6 +15,10 @@ into the Python Console, and execute.
 EditorBinder is released under the MIT License. See `LICENSE.txt` and
 `NOTICE.txt`.
 
+The current bundled Free Core catalog contains 21 ready-to-use tools. Recent
+additions include material-based actor selection, undoable batch Actor Tag
+updates, and an audit for missing StaticMeshComponent material assignments.
+
 ## Downloads
 
 Latest Windows EXE: [Download EditorBinder from the latest release](https://github.com/bartuom/editorbinder/releases/latest)
