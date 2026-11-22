@@ -114,7 +114,7 @@ import unreal
             "def process(items):\n"
             "    count = len(items)\n"
             "    return count\n"
-            "count = {{count}}\n"
+            "count = 5\n"
         )
         rendered = render_tool_code(code, {"count": "42"})
         self.assertIn("    count = len(items)", rendered)
@@ -123,11 +123,13 @@ import unreal
     def test_rewrite_ignores_comparison_operators(self) -> None:
         code = (
             "# Param: count | int | 5 | Count\n"
-            "count = {{count}}\n"
+            "count == 5\n"
             "is_default = (count == 5)\n"
+            "count = 5\n"
         )
         rendered = render_tool_code(code, {"count": "42"})
         self.assertIn("count == 5", rendered)
+        self.assertIn("is_default = (count == 5)", rendered)
         self.assertIn("count = 42", rendered)
 
     def test_render_tool_code_rejects_nan_and_inf(self) -> None:
