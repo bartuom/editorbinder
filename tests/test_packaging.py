@@ -294,6 +294,25 @@ class PackagingTests(unittest.TestCase):
             self.assertIn("--no-standalone-exe", line)
             self.assertIn("%*", line)
 
+    def test_source_release_excludes_generated_distribution_metadata(self) -> None:
+        module = _load_packaging_module()
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source_file = root / "src" / "editorbinder" / "app.py"
+            egg_info = root / "src" / "editorbinder.egg-info" / "PKG-INFO"
+            dist_info = root / "src" / "editorbinder-0.1.1.dist-info" / "METADATA"
+            source_file.parent.mkdir(parents=True)
+            egg_info.parent.mkdir(parents=True)
+            dist_info.parent.mkdir(parents=True)
+            source_file.write_text("def main():\n    return 0\n", encoding="utf-8")
+            egg_info.write_text("generated metadata", encoding="utf-8")
+            dist_info.write_text("generated metadata", encoding="utf-8")
+
+            files = {path.relative_to(root).as_posix() for path in module.iter_release_files(root)}
+
+        self.assertIn("src/editorbinder/app.py", files)
+        self.assertFalse(any(path.endswith((".egg-info/PKG-INFO", ".dist-info/METADATA")) for path in files))
+
 
 if __name__ == "__main__":
     unittest.main()
