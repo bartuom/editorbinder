@@ -43,6 +43,11 @@ def configure_code_tags(widget: tk.Text) -> None:
     widget.tag_configure("string", foreground="#c3e88d")
     widget.tag_configure("comment", foreground="#637777")
     widget.tag_configure("builtin", foreground="#ffcb6b")
+    widget.tag_raise("string", "keyword")
+    widget.tag_raise("string", "builtin")
+    widget.tag_raise("comment", "string")
+    widget.tag_raise("comment", "keyword")
+    widget.tag_raise("comment", "builtin")
 
 
 def apply_python_highlighting(widget: tk.Text) -> None:
@@ -53,7 +58,10 @@ def apply_python_highlighting(widget: tk.Text) -> None:
     for match in re.finditer(r"#[^\n]*", code):
         _tag_range(widget, "comment", match.start(), match.end())
 
-    for match in re.finditer(r'"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\'', code):
+    for match in re.finditer(
+        r'"{3}[\s\S]*?"{3}|\'{3}[\s\S]*?\'{3}|"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\'',
+        code,
+    ):
         _tag_range(widget, "string", match.start(), match.end())
 
     for match in re.finditer(r"\b[A-Za-z_][A-Za-z0-9_]*\b", code):
