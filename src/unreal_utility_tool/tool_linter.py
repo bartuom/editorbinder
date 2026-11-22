@@ -28,8 +28,6 @@ _MUTATING_CALLS = {
     "attach_to_actor",
     "detach_from_actor",
     "destroy_component",
-    "register_component",
-    "unregister_component",
     "set_material",
     "set_collision_profile_name",
     "set_collision_enabled",

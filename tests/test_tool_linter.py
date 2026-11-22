@@ -108,8 +108,6 @@ unreal.log("done")
             "add_actor_world_transform",
             "add_actor_local_transform",
             "destroy_component",
-            "register_component",
-            "unregister_component",
         ]
         for call in mutating_calls:
             with self.subTest(call=call):
