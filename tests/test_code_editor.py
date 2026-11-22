@@ -4,8 +4,6 @@ import importlib.util
 import unittest
 
 from unreal_utility_tool.ui.code_editor import (
-    BUILTINS,
-    PYTHON_KEYWORDS,
     apply_python_highlighting,
     configure_code_tags,
 )

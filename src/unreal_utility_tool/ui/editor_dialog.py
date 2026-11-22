@@ -30,7 +30,6 @@ from ..settings import AppSettings
 from ..theme import (
     ACCENT,
     ACCENT_DARK,
-    ACCENT_HOVER,
     BG,
     BORDER,
     BORDER_DARK,

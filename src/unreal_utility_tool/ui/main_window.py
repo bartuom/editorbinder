@@ -25,7 +25,7 @@ from ..params import ParamRenderError, ToolParam, parse_tool_params, render_tool
 from ..prompts import build_fix_prompt
 from ..release_catalog import FREE_CORE_TOOL_IDS
 from ..settings import AppSettingsStore, resolve_default_settings_path
-from ..storage import ToolLibraryStore, app_file_path, app_root, refresh_bundled_presets
+from ..storage import ToolLibraryStore, app_file_path, refresh_bundled_presets
 from ..theme import (
     ACCENT,
     ACCENT_DARK,
@@ -1545,7 +1545,6 @@ class UnrealUtilityApp:
         self.copy_button_by_tool_id = {}
         self.param_input_widgets = {}
         self.param_error_labels = {}
-        spec = self._layout_spec()
 
         if not self.filtered_tools:
             empty = tk.Frame(self.list_inner, bg=PANEL, padx=10, pady=10)

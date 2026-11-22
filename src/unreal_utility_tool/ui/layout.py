@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..theme import CARD_TITLE_FONT, TITLE_FONT
+from ..theme import CARD_TITLE_FONT
 
 
 @dataclass(frozen=True, slots=True)

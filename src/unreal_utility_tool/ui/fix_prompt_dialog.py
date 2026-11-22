@@ -5,7 +5,7 @@ from tkinter import ttk
 
 from ..models import Tool
 from ..prompts import build_fix_prompt
-from ..theme import BG, BORDER, CODE_BG, HEADER_BG, MUTED, PANEL, SMALL_FONT, TEXT, TITLE_FONT, UI_FONT, make_button
+from ..theme import BG, BORDER, CODE_BG, HEADER_BG, MUTED, SMALL_FONT, TEXT, TITLE_FONT, UI_FONT, make_button
 from .windowing import (
     _compute_dialog_geometry,
     _fallback_work_area_for_widget,
