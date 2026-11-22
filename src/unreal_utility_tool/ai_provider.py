@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import math
 import os
 import urllib.error
 import urllib.parse
@@ -94,6 +95,10 @@ class OpenAiCompatibleClient:
         if not model:
             raise AiProviderError("AI model is required.")
 
+        temperature = float(self.config.temperature)
+        if not math.isfinite(temperature) or not 0.0 <= temperature <= 2.0:
+            raise AiProviderError("AI temperature must be a finite value between 0 and 2.")
+
         api_key = self._api_key()
         request_url = chat_completions_url(base_url)
         payload = {
@@ -102,12 +107,15 @@ class OpenAiCompatibleClient:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "temperature": float(self.config.temperature),
+            "temperature": temperature,
             "max_tokens": int(self.config.max_tokens),
             "stream": False,
         }
         raw_response = self._post_json(request_url, payload, api_key)
-        content = extract_chat_message(raw_response)
+        try:
+            content = extract_chat_message(raw_response)
+        except AiProviderError as exc:
+            raise AiProviderError(_redact_secret(str(exc), api_key)) from exc
         return AiProviderResponse(content=content, raw_response=raw_response, request_url=request_url, model=model)
 
     def _api_key(self) -> str:
@@ -135,14 +143,19 @@ class OpenAiCompatibleClient:
                 return response.read().decode("utf-8", errors="replace")
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace").strip()
+            detail = _redact_secret(detail, api_key)
             suffix = f": {detail[:800]}" if detail else ""
             raise AiProviderError(f"AI HTTP error {exc.code}{suffix}") from exc
         except urllib.error.URLError as exc:
-            raise AiProviderError(f"AI connection error: {exc.reason}") from exc
+            if isinstance(exc.reason, TimeoutError):
+                raise AiProviderError("AI request timed out.") from exc
+            reason = _redact_secret(str(exc.reason), api_key)
+            raise AiProviderError(f"AI connection error: {reason}") from exc
         except TimeoutError as exc:
             raise AiProviderError("AI request timed out.") from exc
         except OSError as exc:
-            raise AiProviderError(f"AI request failed: {exc}") from exc
+            detail = _redact_secret(str(exc), api_key)
+            raise AiProviderError(f"AI request failed: {detail}") from exc
 
 
 def provider_names() -> list[str]:
@@ -212,10 +225,16 @@ def chat_completions_url(base_url: str) -> str:
             "Insecure HTTP is only permitted for local loopback hosts (localhost, 127.0.0.1). Use HTTPS for remote providers."
         )
 
-    base = cleaned.rstrip("/")
-    if base.endswith("/chat/completions"):
-        return base
-    return f"{base}/chat/completions"
+    path = parsed.path.rstrip("/")
+    if not path.endswith("/chat/completions"):
+        path = f"{path}/chat/completions" if path else "/chat/completions"
+    return urllib.parse.urlunparse(parsed._replace(path=path))
+
+
+def _redact_secret(value: str, secret: str) -> str:
+    if not secret:
+        return value
+    return value.replace(secret, "[REDACTED]")
 
 
 def extract_chat_message(raw_response: str) -> str:
@@ -226,6 +245,14 @@ def extract_chat_message(raw_response: str) -> str:
 
     if isinstance(payload, dict) and payload.get("error"):
         raise AiProviderError(f"AI error: {payload['error']}")
+
+    choices = payload.get("choices") if isinstance(payload, dict) else None
+    if isinstance(choices, list) and choices and isinstance(choices[0], dict):
+        finish_reason = str(choices[0].get("finish_reason") or "").casefold()
+        if finish_reason in {"length", "max_tokens"}:
+            raise AiProviderError(
+                "AI response was truncated at the output token limit. Increase Max tokens or shorten the request."
+            )
 
     try:
         content = payload["choices"][0]["message"]["content"]

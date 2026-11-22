@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import io
 import json
+import urllib.error
 import unittest
+from unittest.mock import patch
 
 from unreal_utility_tool.ai_provider import (
     AiProviderConfig,
@@ -86,6 +89,14 @@ class AiProviderTests(unittest.TestCase):
             chat_completions_url("https://api.deepseek.com/chat/completions/"),
             "https://api.deepseek.com/chat/completions",
         )
+        self.assertEqual(
+            chat_completions_url("https://api.example.com/v1?api-version=2025-01-01"),
+            "https://api.example.com/v1/chat/completions?api-version=2025-01-01",
+        )
+        self.assertEqual(
+            chat_completions_url("https://api.example.com/v1/chat/completions?api-version=2025-01-01"),
+            "https://api.example.com/v1/chat/completions?api-version=2025-01-01",
+        )
 
     def test_chat_completions_url_local_loopback_http_succeeds(self) -> None:
         self.assertEqual(
@@ -166,6 +177,52 @@ class AiProviderTests(unittest.TestCase):
         raw = json.dumps({"choices": [{"message": {"content": "hello"}}]})
 
         self.assertEqual(extract_chat_message(raw), "hello")
+
+    def test_extract_chat_message_rejects_token_truncated_response(self) -> None:
+        raw = json.dumps(
+            {"choices": [{"finish_reason": "length", "message": {"content": "import unreal\n# partial"}}]}
+        )
+        with self.assertRaisesRegex(AiProviderError, "truncated at the output token limit"):
+            extract_chat_message(raw)
+
+    def test_http_error_redacts_api_key_from_response_body(self) -> None:
+        secret = "sk-test-secret-123"
+        error = urllib.error.HTTPError(
+            "https://api.example.test/v1/chat/completions",
+            401,
+            "Unauthorized",
+            {},
+            io.BytesIO(f'{{"error":"invalid token {secret}"}}'.encode("utf-8")),
+        )
+        client = OpenAiCompatibleClient(
+            AiProviderConfig(base_url="https://api.example.test/v1", model="test"),
+            environ={"EDITORBINDER_API_KEY": secret},
+        )
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(AiProviderError) as context:
+                client._post_json("https://api.example.test/v1/chat/completions", {}, secret)
+        self.assertNotIn(secret, str(context.exception))
+        self.assertIn("[REDACTED]", str(context.exception))
+
+    def test_url_error_wrapped_timeout_has_timeout_message(self) -> None:
+        client = OpenAiCompatibleClient(
+            AiProviderConfig(base_url="https://api.example.test/v1", model="test"),
+            environ={"EDITORBINDER_API_KEY": "secret"},
+        )
+        wrapped_timeout = urllib.error.URLError(TimeoutError("timed out"))
+        with patch("urllib.request.urlopen", side_effect=wrapped_timeout):
+            with self.assertRaisesRegex(AiProviderError, "AI request timed out"):
+                client._post_json("https://api.example.test/v1/chat/completions", {}, "secret")
+
+    def test_client_rejects_non_finite_or_out_of_range_temperature(self) -> None:
+        for temperature in (-5.0, 2.1, float("nan"), float("inf")):
+            with self.subTest(temperature=temperature):
+                client = OpenAiCompatibleClient(
+                    AiProviderConfig(base_url="https://api.example.test/v1", model="test", temperature=temperature),
+                    environ={"EDITORBINDER_API_KEY": "secret"},
+                )
+                with self.assertRaisesRegex(AiProviderError, "temperature must be a finite value between 0 and 2"):
+                    client.complete("hello")
 
     def test_successful_generation_returns_parsed_tool(self) -> None:
         response = """<<<UUT_NAME>>>
