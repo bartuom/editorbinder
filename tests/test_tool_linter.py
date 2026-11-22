@@ -53,6 +53,33 @@ unreal.log("done")
 
         self.assertTrue(any(issue.title == "Move verification missing" for issue in issues))
 
+    def test_linter_detects_destroy_and_component_mutations(self) -> None:
+        samples = [
+            "actor.destroy_actor()\nunreal.log('done')",
+            "mesh.set_material(0, material)\nunreal.log('done')",
+            "component.set_collision_profile_name('BlockAll')\nunreal.log('done')",
+            "actor.attach_to_actor(parent)\nunreal.log('done')",
+        ]
+        for code in samples:
+            with self.subTest(code=code):
+                issues = lint_tool_code(code)
+                self.assertTrue(any(issue.title == "Missing editor transaction" for issue in issues))
+
+    def test_comments_and_strings_do_not_trigger_or_suppress_transaction_warning(self) -> None:
+        code = "# unreal.ScopedEditorTransaction('comment only')\nmessage = 'actor.destroy_actor()'\nactor.destroy_actor()\nunreal.log('done')"
+        issues = lint_tool_code(code)
+        self.assertTrue(any(issue.title == "Missing editor transaction" for issue in issues))
+
+    def test_comments_and_strings_do_not_suppress_final_log_warning(self) -> None:
+        code = "# unreal.log('comment only')\nmessage = 'unreal.log(\"not executable\")'\nactor.set_actor_label('renamed')"
+        issues = lint_tool_code(code)
+        self.assertTrue(any(issue.title == "No final log" for issue in issues))
+
+    def test_hit_result_property_detection_ignores_unrelated_actor_location(self) -> None:
+        code = "raw = unreal.SystemLibrary.line_trace_single(world, start, end, trace_type, False, [], draw_type, False)\nactor_location = actor.get_actor_location()\nunreal.log(str(actor_location))"
+        issues = lint_tool_code(code)
+        self.assertFalse(any(issue.title == "Direct HitResult property access" for issue in issues))
+
 
 if __name__ == "__main__":
     unittest.main()
