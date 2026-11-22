@@ -111,6 +111,43 @@ def clamp_geometry_to_screen(
     return f"{width}x{height}+{clamped_x}+{clamped_y}"
 
 
+def clamp_geometry_to_work_area(
+    geometry: str,
+    work_area: tuple[int, int, int, int],
+    *,
+    min_width: int = DEFAULT_MIN_WINDOW_WIDTH,
+    min_height: int = DEFAULT_MIN_WINDOW_HEIGHT,
+) -> str | None:
+    if not isinstance(geometry, str) or len(work_area) != 4:
+        return None
+
+    match = re.match(r"^(\d+)x(\d+)([+-][+-]?\d+)([+-][+-]?\d+)$", geometry.strip())
+    if not match:
+        return None
+
+    try:
+        width = int(match.group(1))
+        height = int(match.group(2))
+        x = int(match.group(3).replace("+", ""))
+        y = int(match.group(4).replace("+", ""))
+        left, top, right, bottom = (int(value) for value in work_area)
+    except (TypeError, ValueError):
+        return None
+
+    work_width = right - left
+    work_height = bottom - top
+    if width < min_width or height < min_height:
+        return None
+    if work_width < min_width or work_height < min_height:
+        return None
+
+    width = min(width, work_width)
+    height = min(height, work_height)
+    clamped_x = max(left, min(x, right - width))
+    clamped_y = max(top, min(y, bottom - height))
+    return f"{width}x{height}{clamped_x:+d}{clamped_y:+d}"
+
+
 def set_initial_window_size(root: tk.Tk) -> None:
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()

@@ -6,6 +6,7 @@ from unreal_utility_tool.ui.windowing import (
     DEFAULT_MIN_WINDOW_HEIGHT,
     DEFAULT_MIN_WINDOW_WIDTH,
     clamp_geometry_to_screen,
+    clamp_geometry_to_work_area,
     is_valid_geometry,
 )
 
@@ -90,6 +91,27 @@ class WindowingRecoveryTests(unittest.TestCase):
         self.assertTrue(is_valid_geometry("500x400+-3000+-2000"))
         self.assertFalse(is_valid_geometry("invalid"))
         self.assertFalse(is_valid_geometry(""))
+
+    def test_preserves_valid_geometry_on_left_hand_monitor(self) -> None:
+        result = clamp_geometry_to_work_area("500x400-1800+100", (-1920, 0, 0, 1080))
+        self.assertEqual(result, "500x400-1800+100")
+
+    def test_recovers_geometry_from_disconnected_monitor(self) -> None:
+        result = clamp_geometry_to_work_area("500x400-5000+100", (0, 0, 1920, 1080))
+        self.assertEqual(result, "500x400+0+100")
+
+    def test_recovers_positive_offscreen_geometry_to_work_area(self) -> None:
+        result = clamp_geometry_to_work_area("500x400+5000+5000", (0, 0, 1920, 1080))
+        self.assertEqual(result, "500x400+1420+680")
+
+    def test_uses_monitor_work_area_including_negative_origin(self) -> None:
+        result = clamp_geometry_to_work_area("700x500-1800-900", (-1920, -1080, 0, 0))
+        self.assertEqual(result, "700x500-1800-900")
+
+    def test_caps_window_size_to_work_area_and_rejects_too_small_area(self) -> None:
+        result = clamp_geometry_to_work_area("1800x1000+0+0", (0, 0, 1280, 720))
+        self.assertEqual(result, "1280x720+0+0")
+        self.assertIsNone(clamp_geometry_to_work_area("500x400+0+0", (0, 0, 300, 200)))
 
 
 if __name__ == "__main__":

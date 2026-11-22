@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -33,6 +34,7 @@ class MainWindowInteractionTests(unittest.TestCase):
                 "_scroll_overscroll_after_id",
                 "_filter_refresh_after_id",
                 "_list_canvas_width_after_id",
+                "_copy_feedback_after_id",
             ):
                 after_id = getattr(self.app, attr, "")
                 if after_id:
@@ -57,6 +59,36 @@ class MainWindowInteractionTests(unittest.TestCase):
         store.save_tools(ToolLibraryStore(seed_path).load_tools())
         self.app = UnrealUtilityApp(self.root, store, settings_store=settings_store)
         return self.app
+
+
+    def _create_app_with_saved_geometry(self, temp_dir: str, geometry: str):
+        from unreal_utility_tool.settings import AppSettingsStore
+        from unreal_utility_tool.storage import ToolLibraryStore
+        from unreal_utility_tool.ui.main_window import UnrealUtilityApp
+
+        root = Path(temp_dir)
+        store = ToolLibraryStore(root / "tools.json")
+        settings_path = root / "settings.json"
+        settings_path.write_text(json.dumps({"geometry": geometry}), encoding="utf-8")
+        settings_store = AppSettingsStore(settings_path)
+        seed_path = Path(__file__).resolve().parents[1] / "data" / "tools.json"
+        store.save_tools(ToolLibraryStore(seed_path).load_tools())
+        self.app = UnrealUtilityApp(self.root, store, settings_store=settings_store)
+        return self.app
+
+    def test_startup_recovers_saved_geometry_to_current_monitor_work_area(self) -> None:
+        screen_width = int(self.root.winfo_screenwidth())
+        screen_height = int(self.root.winfo_screenheight())
+        work_area = (0, 0, screen_width, screen_height)
+        expected = f"500x400+{max(0, screen_width - 500)}+{max(0, screen_height - 400)}"
+        with TemporaryDirectory() as temp_dir:
+            with patch(
+                "unreal_utility_tool.ui.main_window._monitor_work_area_for_widget",
+                return_value=work_area,
+            ):
+                app = self._create_app_with_saved_geometry(temp_dir, "500x400+5000+5000")
+
+            self.assertEqual(app.root.geometry(), expected)
 
     def test_compact_tool_row_button_exempt_from_keyboard_control_focus(self) -> None:
         import tkinter as tk
@@ -274,6 +306,29 @@ class MainWindowInteractionTests(unittest.TestCase):
         external_label.event_generate("<ButtonRelease-1>", x=42, y=10)
         self.root.update()
         self.assertGreater(int(var.get()), val_before)
+
+    def test_close_cancels_copy_feedback_and_scroll_animation_callbacks(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            app = self._create_app(temp_dir)
+            tool = app.filtered_tools[0]
+            app._show_copy_feedback(tool.id, tool.name)
+            copy_after_id = app._copy_feedback_after_id
+            scroll_after_id = app.root.after(60000, lambda: None)
+            app._scroll_overscroll_after_id = scroll_after_id
+            cancelled: list[str] = []
+            original_after_cancel = app.root.after_cancel
+
+            def record_after_cancel(after_id: str) -> None:
+                cancelled.append(after_id)
+                original_after_cancel(after_id)
+
+            app.root.after_cancel = record_after_cancel
+            app._close()
+
+            self.assertIn(copy_after_id, cancelled)
+            self.assertIn(scroll_after_id, cancelled)
+            self.assertEqual(app._copy_feedback_after_id, "")
+            self.assertEqual(app._scroll_overscroll_after_id, "")
 
 
 if __name__ == "__main__":

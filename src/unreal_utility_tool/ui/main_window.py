@@ -71,7 +71,14 @@ from .editor_dialog import ToolEditorDialog
 from .fix_prompt_dialog import FixPromptDialog
 from .layout import LayoutSpec, _layout_spec_for_width
 from .restore_dialog import RestoreBackupDialog
-from .windowing import is_valid_geometry, set_app_icon, set_initial_window_size
+from .windowing import (
+    _fallback_work_area_for_widget,
+    _monitor_work_area_for_widget,
+    clamp_geometry_to_work_area,
+    is_valid_geometry,
+    set_app_icon,
+    set_initial_window_size,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -342,6 +349,7 @@ class UnrealUtilityApp:
         self.expanded_tool_id = ""
         self.copy_feedback_tool_id = ""
         self._copy_feedback_token = 0
+        self._copy_feedback_after_id = ""
         self._scroll_drag_active = False
         self._scroll_drag_started = False
         self._scroll_drag_start_y = 0
@@ -408,10 +416,22 @@ class UnrealUtilityApp:
         self._app_icon = set_app_icon(self.root)
 
     def _set_saved_or_initial_window_size(self) -> None:
-        if self._is_valid_geometry(self.settings.geometry):
-            self.root.geometry(self.settings.geometry)
+        geometry = self.settings.geometry
+        if not self._is_valid_geometry(geometry):
+            self._set_initial_window_size()
             return
-        self._set_initial_window_size()
+
+        self.root.geometry(geometry)
+        self.root.update_idletasks()
+        work_area = _monitor_work_area_for_widget(self.root) or _fallback_work_area_for_widget(self.root)
+        if work_area is None:
+            return
+
+        recovered_geometry = clamp_geometry_to_work_area(geometry, work_area)
+        if recovered_geometry is None:
+            self._set_initial_window_size()
+        elif recovered_geometry != geometry:
+            self.root.geometry(recovered_geometry)
 
     def _is_valid_geometry(self, geometry: str) -> bool:
         return is_valid_geometry(geometry)
@@ -1361,6 +1381,8 @@ class UnrealUtilityApp:
             "_list_canvas_width_after_id",
             "_tool_wrap_refresh_after_id",
             "_details_sync_after_id",
+            "_scroll_overscroll_after_id",
+            "_copy_feedback_after_id",
         ):
             self._cancel_after(attr_name)
         self.settings.geometry = self.root.geometry()
@@ -2924,11 +2946,16 @@ class UnrealUtilityApp:
         if previous_tool_id and previous_tool_id != tool_id:
             self._set_copy_button_feedback(previous_tool_id, active=False)
         self._set_copy_button_feedback(tool_id, active=True)
-        self.root.after(1300, lambda current_token=token: self._clear_copy_feedback(current_token))
+        self._cancel_after("_copy_feedback_after_id")
+        self._copy_feedback_after_id = self.root.after(
+            1300,
+            lambda current_token=token: self._clear_copy_feedback(current_token),
+        )
 
     def _clear_copy_feedback(self, token: int) -> None:
         if token != self._copy_feedback_token:
             return
+        self._copy_feedback_after_id = ""
         if not self.copy_feedback_tool_id:
             return
         tool_id = self.copy_feedback_tool_id
