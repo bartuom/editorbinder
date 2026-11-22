@@ -15,6 +15,10 @@ into the Python Console, and execute.
 EditorBinder is released under the MIT License. See `LICENSE.txt` and
 `NOTICE.txt`.
 
+The current bundled Free Core catalog contains 21 ready-to-use tools. Recent
+additions include material-based actor selection, undoable batch Actor Tag
+updates, and an audit for missing StaticMeshComponent material assignments.
+
 ## Downloads
 
 Latest Windows EXE: [Download EditorBinder from the latest release](https://github.com/bartuom/editorbinder/releases/latest)
@@ -136,8 +140,8 @@ the fix-prompt workflow.
 
 ## Bundled Tools
 
-The default library starts with an 18-tool Free Core focused on everyday Unreal
-scene cleanup, placement, audit, and batch editing:
+The default library starts with a 21-tool Free Core focused on everyday Unreal
+scene cleanup, placement, audit, material workflows, and batch editing:
 
 - scene cleanup audit report,
 - distribute selected actors in a grid,
@@ -156,7 +160,10 @@ scene cleanup, placement, audit, and batch editing:
 - reset bad selected actor scale,
 - select actors by label text,
 - select actors by class name,
-- report selected actors summary.
+- report selected actors summary,
+- select actors by material name or asset path,
+- batch add, remove, or replace Actor Tags with undo support,
+- audit missing material assignments on selected actors.
 
 The tracked bundled seed is:
 

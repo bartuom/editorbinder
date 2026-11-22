@@ -47,6 +47,9 @@ class PresetTests(unittest.TestCase):
                 "Select Actors By Label Text",
                 "Select Actors By Class Name",
                 "Report Selected Actors Summary",
+                "Select Actors By Material",
+                "Batch Update Actor Tags",
+                "Audit Missing Material Slots",
             ],
         )
 
@@ -103,6 +106,7 @@ class PresetTests(unittest.TestCase):
             "Organize Selected Actors By Static Mesh",
             "Flatten Selected Actors To Same Z",
             "Reset Bad Scale On Selected Actors",
+            "Batch Update Actor Tags",
         }
 
         by_name = {tool.name: tool for tool in self._seed_tools()}
@@ -126,6 +130,8 @@ class PresetTests(unittest.TestCase):
             "Select Actors By Label Text",
             "Select Actors By Class Name",
             "Report Selected Actors Summary",
+            "Select Actors By Material",
+            "Audit Missing Material Slots",
         }
         by_name = {tool.name: tool for tool in self._seed_tools()}
 

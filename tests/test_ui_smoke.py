@@ -22,10 +22,9 @@ class UiSmokeTests(unittest.TestCase):
         from unreal_utility_tool import __version__
         from unreal_utility_tool.params import parse_tool_params
         from unreal_utility_tool.settings import AppSettingsStore
-        from unreal_utility_tool.storage import ToolLibraryStore
+        from unreal_utility_tool.storage import ToolLibraryStore, app_root
         from unreal_utility_tool.tool_importer import IMPORT_POLICY_SKIP
         from unreal_utility_tool.tk_app import (
-            ACCENT,
             MUTED,
             ToolEditorDialog,
             UnrealNumericField,
@@ -168,8 +167,8 @@ class UiSmokeTests(unittest.TestCase):
                     opened_paths,
                     [
                         store.path.parent,
-                        main_window_module.app_root() / "LICENSE.txt",
-                        main_window_module.app_root() / "CHANGELOG.md",
+                        app_root() / "LICENSE.txt",
+                        app_root() / "CHANGELOG.md",
                         settings_store.path,
                     ],
                 )

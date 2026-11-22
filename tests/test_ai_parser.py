@@ -192,6 +192,41 @@ if True
         self.assertEqual(parsed.name, "Broken")
         self.assertTrue(any(item.startswith("code syntax error:") for item in parsed.diagnostics))
 
+    def test_marker_notes_after_code_do_not_leak_into_code(self) -> None:
+        parsed = parse_ai_tool_response(
+            """<<<UUT_NAME>>>
+Late Notes Tool
+<<<UUT_CODE>>>
+import unreal
+unreal.log("ok")
+<<<UUT_NOTES>>>
+Notes that follow the code marker.
+<<<UUT_END>>>
+"""
+        )
+
+        self.assertEqual(parsed.name, "Late Notes Tool")
+        self.assertEqual(parsed.notes, "Notes that follow the code marker.")
+        self.assertEqual(parsed.code, 'import unreal\nunreal.log("ok")')
+        self.assertIn("code syntax ok", parsed.diagnostics)
+
+    def test_marker_format_strips_unclosed_python_fence(self) -> None:
+        parsed = parse_ai_tool_response(
+            """<<<UUT_NAME>>>
+Unclosed Fence Tool
+<<<UUT_NOTES>>>
+None
+<<<UUT_CODE>>>
+```python
+import unreal
+unreal.log("ok")
+<<<UUT_END>>>
+"""
+        )
+
+        self.assertEqual(parsed.code, 'import unreal\nunreal.log("ok")')
+        self.assertIn("code syntax ok", parsed.diagnostics)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -99,7 +99,7 @@ def _parse_marker_format(text: str) -> ParsedAiTool | None:
 
     code_line_index = code_positions[0][0]
     code_end_index = next(
-        (line_index for line_index, marker in marker_positions if marker == MARKER_END and line_index > code_line_index),
+        (line_index for line_index, _marker in marker_positions if line_index > code_line_index),
         len(lines),
     )
     code = _clean_code_block("\n".join(lines[code_line_index + 1 : code_end_index]))
@@ -159,10 +159,10 @@ def _clean_code_block(text: str) -> str:
 
 
 def _strip_code_fence(text: str) -> str:
-    fence_match = re.fullmatch(
-        r"```[ \t]*(?:python|py)?[ \t]*\r?\n?(.*?)\r?\n?```",
+    fence_match = re.search(
+        r"^[ \t]*```[ \t]*(?:python|py)?[ \t]*\r?\n(.*?)(?:\r?\n[ \t]*```[ \t]*(?:\r?\n|\Z)|\Z)",
         text.strip(),
-        flags=re.IGNORECASE | re.DOTALL,
+        flags=re.IGNORECASE | re.DOTALL | re.MULTILINE,
     )
     if fence_match:
         return fence_match.group(1).strip()

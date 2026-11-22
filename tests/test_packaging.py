@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import json
 import subprocess
 import sys
 import zipfile
@@ -129,7 +128,7 @@ class PackagingTests(unittest.TestCase):
         support = (root / "SUPPORT_POLICY.md").read_text(encoding="utf-8")
 
         self.assertIn("Initial open-source Free Core release", changelog)
-        self.assertIn("18-tool Free Core", changelog)
+        self.assertIn("21-tool Free Core", changelog)
         self.assertIn("community-supported open source", support)
         self.assertNotIn("pur" + "chase", support.casefold())
         self.assertNotIn("re" + "fund", support.casefold())
@@ -249,7 +248,7 @@ class PackagingTests(unittest.TestCase):
         self.assertTrue(any(path.startswith("src/") for path in files))
         self.assertIn("docs\\", text)
         self.assertIn("src\\", text)
-        self.assertIn("18-tool Free Core", text)
+        self.assertIn("21-tool Free Core", text)
 
     def test_public_git_index_does_not_include_private_artifacts(self) -> None:
         root = Path(__file__).resolve().parents[1]
@@ -279,6 +278,39 @@ class PackagingTests(unittest.TestCase):
             with zipfile.ZipFile(archive_path) as archive:
                 with self.assertRaisesRegex(RuntimeError, "private path"):
                     module._reject_disallowed_paths(archive_path.name, set(archive.namelist()))
+
+    def test_build_pyinstaller_onedir_bat_invocations_use_no_standalone_exe_and_forward_args(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        bat_file = root / "build_pyinstaller_onedir.bat"
+        lines = [
+            line.strip()
+            for line in bat_file.read_text(encoding="utf-8").splitlines()
+            if "package_windows_release.py" in line
+        ]
+
+        self.assertGreaterEqual(len(lines), 3)
+        for line in lines:
+            self.assertIn("--no-standalone-exe", line)
+            self.assertIn("%*", line)
+
+    def test_source_release_excludes_generated_distribution_metadata(self) -> None:
+        module = _load_packaging_module()
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source_file = root / "src" / "editorbinder" / "app.py"
+            egg_info = root / "src" / "editorbinder.egg-info" / "PKG-INFO"
+            dist_info = root / "src" / "editorbinder-0.1.1.dist-info" / "METADATA"
+            source_file.parent.mkdir(parents=True)
+            egg_info.parent.mkdir(parents=True)
+            dist_info.parent.mkdir(parents=True)
+            source_file.write_text("def main():\n    return 0\n", encoding="utf-8")
+            egg_info.write_text("generated metadata", encoding="utf-8")
+            dist_info.write_text("generated metadata", encoding="utf-8")
+
+            files = {path.relative_to(root).as_posix() for path in module.iter_release_files(root)}
+
+        self.assertIn("src/editorbinder/app.py", files)
+        self.assertFalse(any(path.endswith((".egg-info/PKG-INFO", ".dist-info/METADATA")) for path in files))
 
 
 if __name__ == "__main__":

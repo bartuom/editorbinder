@@ -25,7 +25,7 @@ from ..params import ParamRenderError, ToolParam, parse_tool_params, render_tool
 from ..prompts import build_fix_prompt
 from ..release_catalog import FREE_CORE_TOOL_IDS
 from ..settings import AppSettingsStore, resolve_default_settings_path
-from ..storage import ToolLibraryStore, app_file_path, app_root, refresh_bundled_presets
+from ..storage import ToolLibraryStore, app_file_path, refresh_bundled_presets
 from ..theme import (
     ACCENT,
     ACCENT_DARK,
@@ -71,7 +71,14 @@ from .editor_dialog import ToolEditorDialog
 from .fix_prompt_dialog import FixPromptDialog
 from .layout import LayoutSpec, _layout_spec_for_width
 from .restore_dialog import RestoreBackupDialog
-from .windowing import is_valid_geometry, set_app_icon, set_initial_window_size
+from .windowing import (
+    _fallback_work_area_for_widget,
+    _monitor_work_area_for_widget,
+    clamp_geometry_to_work_area,
+    is_valid_geometry,
+    set_app_icon,
+    set_initial_window_size,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +91,53 @@ class ParamRenderGroup:
 DETAIL_NUMERIC_WIDTH = 180
 DETAIL_VECTOR_NUMERIC_WIDTH = 110
 DETAIL_RANGE_NUMERIC_WIDTH = 160
+
+
+def _event_coord_x(event: tk.Event | None) -> int:
+    if event is None:
+        return 0
+    x_root = getattr(event, "x_root", None)
+    if x_root is not None:
+        try:
+            return int(x_root)
+        except (TypeError, ValueError):
+            pass
+    x = getattr(event, "x", None)
+    if x is not None:
+        try:
+            return int(x)
+        except (TypeError, ValueError):
+            pass
+    return 0
+
+
+def _event_state(event: tk.Event | None) -> int:
+    if event is None:
+        return 0
+    try:
+        return int(getattr(event, "state", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _event_has_ctrl(event: tk.Event | None) -> bool:
+    if event is None:
+        return False
+    if getattr(event, "ctrl", False) or getattr(event, "control", False):
+        return True
+    return bool(_event_state(event) & 0x0004)
+
+
+def _event_has_alt(event: tk.Event | None) -> bool:
+    if event is None:
+        return False
+    if getattr(event, "alt", False):
+        return True
+    return bool(_event_state(event) & (0x20000 | 0x0008 | 0x0080))
+
+
+def _is_scrub_modifier(event: tk.Event | None) -> bool:
+    return _event_has_ctrl(event) or _event_has_alt(event)
 
 
 class UnrealNumericField(tk.Frame):
@@ -109,6 +163,7 @@ class UnrealNumericField(tk.Frame):
         self._drag_start_x = 0
         self._last_drag_steps = 0
         self._dragging = False
+        self._scrub_allowed = False
         self._value_before_edit = str(variable.get())
         self._cursor_before_drag = ""
         if width_px is not None:
@@ -116,9 +171,14 @@ class UnrealNumericField(tk.Frame):
             self.grid_propagate(False)
 
         if axis_color:
-            tk.Frame(self, bg=axis_color, width=3).grid(row=0, column=0, sticky="ns")
+            self.axis_indicator = tk.Frame(self, bg=axis_color, width=3, cursor="sb_h_double_arrow")
+            self.axis_indicator.grid(row=0, column=0, sticky="ns")
+            self.axis_indicator.bind("<ButtonPress-1>", self._begin_drag)
+            self.axis_indicator.bind("<B1-Motion>", self._drag)
+            self.axis_indicator.bind("<ButtonRelease-1>", self._end_drag)
             entry_column = 1
         else:
+            self.axis_indicator = None
             entry_column = 0
         self.columnconfigure(entry_column, weight=1)
         self.entry = make_dark_entry(self, variable, width=10)
@@ -153,6 +213,12 @@ class UnrealNumericField(tk.Frame):
         self.entry.bind("<B1-Motion>", self._drag)
         self.entry.bind("<ButtonRelease-1>", self._end_drag)
         self.refresh_reset_visibility()
+
+    def bind_scrub_widget(self, widget: tk.Widget) -> None:
+        widget.configure(cursor="sb_h_double_arrow")
+        widget.bind("<ButtonPress-1>", self._begin_drag, add="+")
+        widget.bind("<B1-Motion>", self._drag, add="+")
+        widget.bind("<ButtonRelease-1>", self._end_drag, add="+")
 
     def apply_step(self, direction: int, multiplier: float = 1.0) -> None:
         self.variable.set(_step_numeric_value(self.param, str(self.variable.get()), direction, multiplier))
@@ -200,16 +266,23 @@ class UnrealNumericField(tk.Frame):
         self.on_validate(save=True)
         return "break"
 
-    def _begin_drag(self, event: tk.Event) -> None:
-        self._drag_start_x = int(getattr(event, "x_root", 0))
+    def _begin_drag(self, event: tk.Event) -> str | None:
+        self._drag_start_x = _event_coord_x(event)
         self._last_drag_steps = 0
         self._dragging = False
         self._value_before_edit = str(self.variable.get())
+        is_entry = getattr(event, "widget", None) is self.entry
+        self._scrub_allowed = (not is_entry) or _is_scrub_modifier(event)
+        if self._scrub_allowed:
+            return "break"
+        return None
 
     def _drag(self, event: tk.Event) -> str | None:
-        delta = int(getattr(event, "x_root", 0)) - self._drag_start_x
-        if not self._dragging and abs(delta) < self.drag_threshold_px:
+        if not self._scrub_allowed:
             return None
+        delta = _event_coord_x(event) - self._drag_start_x
+        if not self._dragging and abs(delta) < self.drag_threshold_px:
+            return "break"
         if not self._dragging:
             self._dragging = True
             self._cursor_before_drag = str(self.winfo_toplevel().cget("cursor") or "")
@@ -226,6 +299,7 @@ class UnrealNumericField(tk.Frame):
         return "break"
 
     def _end_drag(self, _event: tk.Event | None = None) -> str | None:
+        was_scrubbing = self._dragging or self._scrub_allowed
         if self._dragging:
             try:
                 self.winfo_toplevel().configure(cursor=self._cursor_before_drag)
@@ -233,6 +307,8 @@ class UnrealNumericField(tk.Frame):
                 pass
             self._dragging = False
             self._cursor_before_drag = ""
+        self._scrub_allowed = False
+        if was_scrubbing:
             return "break"
         return None
 
@@ -273,6 +349,7 @@ class UnrealUtilityApp:
         self.expanded_tool_id = ""
         self.copy_feedback_tool_id = ""
         self._copy_feedback_token = 0
+        self._copy_feedback_after_id = ""
         self._scroll_drag_active = False
         self._scroll_drag_started = False
         self._scroll_drag_start_y = 0
@@ -339,10 +416,22 @@ class UnrealUtilityApp:
         self._app_icon = set_app_icon(self.root)
 
     def _set_saved_or_initial_window_size(self) -> None:
-        if self._is_valid_geometry(self.settings.geometry):
-            self.root.geometry(self.settings.geometry)
+        geometry = self.settings.geometry
+        if not self._is_valid_geometry(geometry):
+            self._set_initial_window_size()
             return
-        self._set_initial_window_size()
+
+        self.root.geometry(geometry)
+        self.root.update_idletasks()
+        work_area = _monitor_work_area_for_widget(self.root) or _fallback_work_area_for_widget(self.root)
+        if work_area is None:
+            return
+
+        recovered_geometry = clamp_geometry_to_work_area(geometry, work_area)
+        if recovered_geometry is None:
+            self._set_initial_window_size()
+        elif recovered_geometry != geometry:
+            self.root.geometry(recovered_geometry)
 
     def _is_valid_geometry(self, geometry: str) -> bool:
         return is_valid_geometry(geometry)
@@ -827,9 +916,24 @@ class UnrealUtilityApp:
     def _tool_by_id(self, tool_id: str) -> Tool | None:
         return next((tool for tool in self.tools if tool.id == tool_id), None)
 
+    def _is_tool_row_card_button(self, widget: tk.Widget | None = None) -> bool:
+        if widget is None or not isinstance(widget, (tk.Button, ttk.Button)):
+            return False
+        if getattr(widget, "_is_tool_card_button", False):
+            return True
+        for refs in getattr(self, "tool_card_widgets", {}).values():
+            if refs.get("compact") and (widget is refs.get("card") or widget is refs.get("title")):
+                return True
+        for row in getattr(self, "tool_row_by_id", {}).values():
+            if widget is row or getattr(widget, "master", None) is row:
+                return True
+        return False
+
     def _is_keyboard_control_focus(self, widget: tk.Widget | None = None) -> bool:
         focus_widget = widget or self.root.focus_get()
         if focus_widget is None:
+            return False
+        if self._is_tool_row_card_button(focus_widget):
             return False
         return isinstance(
             focus_widget,
@@ -1183,17 +1287,36 @@ class UnrealUtilityApp:
         self._add_tool()
         return "break"
 
+    def _tool_id_from_widget(self, widget: tk.Widget | None) -> str | None:
+        if widget is None:
+            return None
+        tool_id = getattr(widget, "_tool_id", None)
+        if tool_id:
+            return str(tool_id)
+        for tid, refs in getattr(self, "tool_card_widgets", {}).items():
+            if widget is refs.get("card") or widget is refs.get("title") or widget is refs.get("border"):
+                return tid
+        for tid, row in getattr(self, "tool_row_by_id", {}).items():
+            if widget is row or getattr(widget, "master", None) is row:
+                return tid
+        return None
+
     def _copy_selected_shortcut(self, event: tk.Event | None = None) -> str | None:
         if event is not None and self._is_keyboard_control_focus(event.widget):
             return None
-        if not self.current_tool_id:
+        target_id = self._tool_id_from_widget(getattr(event, "widget", None))
+        tool_id = target_id or self.current_tool_id
+        if not tool_id:
             return "break"
-        self._copy_code(self.current_tool_id)
+        self._copy_code(tool_id)
         return "break"
 
     def _toggle_selected_params_shortcut(self, event: tk.Event | None = None) -> str | None:
         if event is not None and self._is_keyboard_control_focus(event.widget):
             return None
+        target_id = self._tool_id_from_widget(getattr(event, "widget", None))
+        if target_id and target_id != self.current_tool_id:
+            self._select_tool(target_id)
         if not self.current_tool_id:
             return "break"
         self._focus_selected_param()
@@ -1202,20 +1325,28 @@ class UnrealUtilityApp:
     def _delete_selected_shortcut(self, event: tk.Event | None = None) -> str | None:
         if event is not None and self._is_keyboard_control_focus(event.widget):
             return None
-        if not self.current_tool_id:
+        target_id = self._tool_id_from_widget(getattr(event, "widget", None))
+        tool_id = target_id or self.current_tool_id
+        if not tool_id:
             return "break"
-        self._delete_tool(self.current_tool_id)
+        self._delete_tool(tool_id)
         return "break"
 
     def _select_previous_tool_shortcut(self, event: tk.Event | None = None) -> str | None:
         if event is not None and self._is_keyboard_control_focus(event.widget):
             return None
+        target_id = self._tool_id_from_widget(getattr(event, "widget", None))
+        if target_id and target_id != self.current_tool_id:
+            self._select_tool(target_id)
         self._move_keyboard_selection(-1)
         return "break"
 
     def _select_next_tool_shortcut(self, event: tk.Event | None = None) -> str | None:
         if event is not None and self._is_keyboard_control_focus(event.widget):
             return None
+        target_id = self._tool_id_from_widget(getattr(event, "widget", None))
+        if target_id and target_id != self.current_tool_id:
+            self._select_tool(target_id)
         self._move_keyboard_selection(1)
         return "break"
 
@@ -1250,6 +1381,8 @@ class UnrealUtilityApp:
             "_list_canvas_width_after_id",
             "_tool_wrap_refresh_after_id",
             "_details_sync_after_id",
+            "_scroll_overscroll_after_id",
+            "_copy_feedback_after_id",
         ):
             self._cancel_after(attr_name)
         self.settings.geometry = self.root.geometry()
@@ -1412,7 +1545,6 @@ class UnrealUtilityApp:
         self.copy_button_by_tool_id = {}
         self.param_input_widgets = {}
         self.param_error_labels = {}
-        spec = self._layout_spec()
 
         if not self.filtered_tools:
             empty = tk.Frame(self.list_inner, bg=PANEL, padx=10, pady=10)
@@ -1607,11 +1739,18 @@ class UnrealUtilityApp:
             font=UI_FONT,
             cursor="hand2",
         )
+        button._is_tool_card_button = True
+        button._tool_id = tool.id
         button.grid(row=0, column=1, sticky="ew")
         button.bind("<Double-Button-1>", lambda _event, tool_id=tool.id: self._copy_code(tool_id))
         button.bind("<Button-3>", lambda _event, tool_id=tool.id: self._show_tool_menu(tool_id))
         button.bind("<Enter>", lambda _event, tool_id=tool.id: self._set_tool_row_hover(tool_id, True))
         button.bind("<Leave>", lambda _event, tool_id=tool.id: self._set_tool_row_hover(tool_id, False))
+        button.bind("<Up>", self._select_previous_tool_shortcut)
+        button.bind("<Down>", self._select_next_tool_shortcut)
+        button.bind("<Delete>", self._delete_selected_shortcut)
+        button.bind("<Return>", self._copy_selected_shortcut)
+        button.bind("<space>", self._toggle_selected_params_shortcut)
 
         for widget in (row, accent):
             widget.bind("<ButtonPress-1>", lambda event, tool_id=tool.id: self._begin_list_row_drag_scroll(event, tool_id))
@@ -2224,14 +2363,15 @@ class UnrealUtilityApp:
             shell.grid(row=0, column=index, sticky="w", padx=(0 if index == 0 else 8, 0))
             shell.columnconfigure(1, weight=0)
             axis = param.name.rsplit("_", 1)[-1].upper()
-            tk.Label(
+            axis_lbl = tk.Label(
                 shell,
                 text=axis,
                 bg=PANEL_ALT,
                 fg=axis_colors.get(axis, MUTED),
                 font=UI_FONT_BOLD,
                 width=2,
-            ).grid(
+            )
+            axis_lbl.grid(
                 row=0,
                 column=0,
                 sticky="ns",
@@ -2244,6 +2384,7 @@ class UnrealUtilityApp:
                 axis_color=None,
                 width_px=numeric_width,
             )
+            control.bind_scrub_widget(axis_lbl)
             control.grid(row=0, column=1, sticky="w")
             self._attach_param_error_label(shell, tool_id, param.name, row=1, column=1)
             self._validate_param_on_change(tool_id, param, save=False)
@@ -2258,12 +2399,14 @@ class UnrealUtilityApp:
             shell.grid(row=0, column=index, sticky="w", padx=(0 if index == 0 else 8, 0))
             shell.columnconfigure(1, weight=0)
             label = "Min" if param.name.startswith("min_") else "Max"
-            tk.Label(shell, text=label, bg=parent_bg, fg=SUBTLE, font=SMALL_FONT, width=4, anchor="w").grid(
+            range_lbl = tk.Label(shell, text=label, bg=parent_bg, fg=SUBTLE, font=SMALL_FONT, width=4, anchor="w")
+            range_lbl.grid(
                 row=0,
                 column=0,
                 padx=(0, 3),
             )
             control = self._create_numeric_control(shell, tool_id, param, width_px=numeric_width)
+            control.bind_scrub_widget(range_lbl)
             control.grid(row=0, column=1, sticky="w")
             self._attach_param_error_label(shell, tool_id, param.name, row=1, column=1)
             self._validate_param_on_change(tool_id, param, save=False)
@@ -2802,11 +2945,16 @@ class UnrealUtilityApp:
         if previous_tool_id and previous_tool_id != tool_id:
             self._set_copy_button_feedback(previous_tool_id, active=False)
         self._set_copy_button_feedback(tool_id, active=True)
-        self.root.after(1300, lambda current_token=token: self._clear_copy_feedback(current_token))
+        self._cancel_after("_copy_feedback_after_id")
+        self._copy_feedback_after_id = self.root.after(
+            1300,
+            lambda current_token=token: self._clear_copy_feedback(current_token),
+        )
 
     def _clear_copy_feedback(self, token: int) -> None:
         if token != self._copy_feedback_token:
             return
+        self._copy_feedback_after_id = ""
         if not self.copy_feedback_tool_id:
             return
         tool_id = self.copy_feedback_tool_id
@@ -3650,26 +3798,13 @@ def _first_focusable_descendant(widget: tk.Widget) -> tk.Widget | None:
 def _numeric_multiplier_from_event(param: ToolParam, event: tk.Event | None) -> float:
     state = _event_state(event)
     multiplier = 1.0
-    if state & 0x0001:
+    if (state & 0x0001) or getattr(event, "shift", False):
         multiplier *= 10.0
-    if state & 0x0004:
+    if (state & 0x0004) or getattr(event, "ctrl", False) or getattr(event, "control", False):
         multiplier *= 0.1
     if param.kind == "int":
         return max(multiplier, 0.1)
     return multiplier
-
-
-def _event_has_ctrl(event: tk.Event | None) -> bool:
-    return bool(_event_state(event) & 0x0004)
-
-
-def _event_state(event: tk.Event | None) -> int:
-    if event is None:
-        return 0
-    try:
-        return int(getattr(event, "state", 0) or 0)
-    except (TypeError, ValueError):
-        return 0
 
 
 def _step_numeric_value(param: ToolParam, raw_value: str, direction: int, multiplier: float = 1.0) -> str:

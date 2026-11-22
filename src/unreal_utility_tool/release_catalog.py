@@ -23,5 +23,8 @@ FREE_CORE_TOOL_IDS = (
     "preset-select-actors-by-label-text",
     "preset-select-actors-by-class-name",
     "preset-report-selected-actors-summary",
+    "preset-select-actors-by-material",
+    "preset-batch-update-actor-tags",
+    "preset-audit-missing-material-slots",
 )
 FREE_CORE_COUNT = len(FREE_CORE_TOOL_IDS)

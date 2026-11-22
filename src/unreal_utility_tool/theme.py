@@ -21,8 +21,8 @@ SUBTLE = "#788390"
 ACCENT = SELECTION_BLUE
 ACCENT_HOVER = "#3f94d4"
 ACCENT_DARK = "#205d8e"
-DANGER = "#9a5a55"
-DANGER_HOVER = "#aa6963"
+DANGER = "#8a4440"
+DANGER_HOVER = "#964b47"
 SUCCESS = "#75ad4b"
 SUCCESS_HOVER = "#84bd59"
 WARNING = "#b69a4a"
@@ -44,6 +44,28 @@ CARD_TITLE_FONT = ("Segoe UI", 8, "bold")
 SMALL_FONT = ("Segoe UI", 8)
 CODE_FONT = ("Consolas", 10)
 ICON_FONT = ("Segoe UI Symbol", 9)
+
+
+def relative_luminance(hex_color: str) -> float:
+    color = hex_color.strip().lstrip("#")
+    if len(color) == 3:
+        color = "".join(c * 2 for c in color)
+    r = int(color[0:2], 16) / 255.0
+    g = int(color[2:4], 16) / 255.0
+    b = int(color[4:6], 16) / 255.0
+
+    def to_linear(c: float) -> float:
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+    return 0.2126 * to_linear(r) + 0.7152 * to_linear(g) + 0.0722 * to_linear(b)
+
+
+def contrast_ratio(hex1: str, hex2: str) -> float:
+    l1 = relative_luminance(hex1)
+    l2 = relative_luminance(hex2)
+    lighter = max(l1, l2)
+    darker = min(l1, l2)
+    return (lighter + 0.05) / (darker + 0.05)
 
 
 def configure_ttk_style() -> None:

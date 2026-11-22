@@ -101,6 +101,8 @@ def _should_include_file(root: Path, path: Path) -> bool:
         return False
     if any(part in EXCLUDED_NAMES for part in relative_parts):
         return False
+    if any(part.casefold().endswith((".egg-info", ".dist-info")) for part in relative_parts):
+        return False
     if path.suffix.casefold() in EXCLUDED_SUFFIXES:
         return False
     return True
