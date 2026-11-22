@@ -1,274 +1,193 @@
-# <img src="assets/editorbinder.png" alt="EditorBinder icon" width="42" height="42"> EditorBinder
+<p align="center">
+  <img src="assets/editorbinder.png" alt="EditorBinder logo" width="92">
+</p>
 
-[![CI](https://github.com/bartuom/editorbinder/actions/workflows/ci.yml/badge.svg)](https://github.com/bartuom/editorbinder/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/bartuom/editorbinder?label=release)](https://github.com/bartuom/editorbinder/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.txt)
+<h1 align="center">EditorBinder</h1>
 
-Lightweight desktop utility for storing paste-ready Unreal Engine Python
-Console scripts.
+<p align="center">
+  <strong>Reusable Unreal Engine tools, one click away.</strong><br>
+  A local-first Windows desktop toolkit for parameterized Unreal Engine Python Editor scripts.
+</p>
 
-EditorBinder is local-first, offline by default, and built on `tkinter` from the
-Python standard library. It does not connect to Unreal Engine directly. It lets
-you save Python snippets, copy them to the clipboard, switch to Unreal, paste
-into the Python Console, and execute.
+<p align="center">
+  <a href="https://github.com/bartuom/editorbinder/actions/workflows/ci.yml"><img src="https://github.com/bartuom/editorbinder/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/bartuom/editorbinder/releases/latest"><img src="https://img.shields.io/github/v/release/bartuom/editorbinder?label=latest%20release" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/Free%20Core-21%20tools-6857D9" alt="21 Free Core tools">
+  <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4" alt="Windows x64">
+  <a href="LICENSE.txt"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT license"></a>
+</p>
 
-EditorBinder is released under the MIT License. See `LICENSE.txt` and
-`NOTICE.txt`.
+<p align="center">
+  <a href="https://github.com/bartuom/editorbinder/releases/latest"><strong>Download for Windows</strong></a>
+  | <a href="QUICKSTART.md">Quickstart</a>
+  | <a href="docs/">Documentation</a>
+  | <a href="CONTRIBUTING.md">Contribute</a>
+</p>
 
-The current bundled Free Core catalog contains 21 ready-to-use tools. Recent
-additions include material-based actor selection, undoable batch Actor Tag
-updates, and an audit for missing StaticMeshComponent material assignments.
+<p align="center">
+  <img src="docs/screenshots/editorbinder-workflow.gif" alt="EditorBinder workflow: choose a tool, set parameters, create a tool and save it" width="820">
+</p>
 
-## Downloads
+> **AI-powered, not AI-dependent.** Keep everyday operations fast and predictable with ready-to-use tools. Bring in AI when you want to create, repair or extend them, not every time you need to use one.
 
-Latest Windows EXE: [Download EditorBinder from the latest release](https://github.com/bartuom/editorbinder/releases/latest)
+## Why EditorBinder?
 
-For most Windows users, download the single-file release asset:
+AI agents and MCP are useful when a task needs reasoning, exploration or several coordinated steps. But not every Unreal Editor operation needs an agent, a prompt and a model call.
 
-```text
-EditorBinder-<version>-win-x64.exe
-```
+If you already know what you want to do, a direct tool is often the better interface: find it, set a few parameters, press a button or a key, and move on. It is repeatable, easy to inspect and does not depend on an AI response.
 
-On the release page, choose `EditorBinder-<version>-win-x64.exe`.
+EditorBinder focuses on that direct workflow. It keeps useful Unreal Python scripts in a searchable desktop library and makes them easy to reuse. AI helps you create and improve tools when you need something new.
 
-Use `EditorBinder-<version>-win-x64.zip` only when you want a portable/debug
-folder. Use `EditorBinder-source-<version>.zip` only when you want the source
-and BAT workflow for a local Python install. The automatic GitHub `Source code`
-downloads are for developers, not the recommended app download.
+**MCP and direct tools are complementary.** MCP gives agents a way to work with tools. EditorBinder gives developers a way to use known tools immediately. The current release is a desktop application and does not include an MCP server; agent integration is a possible direction for the same reusable tool library.
 
-The current Windows EXE is unsigned, so Microsoft Defender SmartScreen may show
-an `Unknown publisher` warning on first launch. Use only assets from the
-official GitHub Release. If you trust the download, choose `More info` /
-`Więcej informacji`, then `Run anyway` / `Uruchom mimo to`. Code signing is
-planned as release hardening.
+## How it works
 
-See `docs\downloads.md` for the full download guide.
+1. **Choose a tool.** Search the library or browse your saved tools.
+2. **Set parameters.** Adjust values exposed by the selected tool.
+3. **Copy it.** Click **Copy** or press **Enter**.
+4. **Run it in Unreal.** Paste the code into Unreal Editor's Python Console and execute it.
 
-## Quick Preview
+EditorBinder does not install into Unreal Engine and does not execute scripts itself. You stay in control of what gets pasted and run.
 
-The short flow below shows the normal first-run path: open the local library,
-pick a bundled Free Core tool, create a new tool in `Add Tool`, and save it to
-the local library.
+## What you get
 
-![EditorBinder workflow: launch, choose a tool, add a tool, and save it](docs/screenshots/editorbinder-workflow.gif)
+### Ready-to-use tools
+
+- 21 tools included in the Free Core.
+- Search, categories, workflow and role filters.
+- Favorites and recently copied tools.
+- Editable parameters with support for strings, paths, numbers, booleans and enums.
+- Keyboard navigation for quick access.
+
+### Your own reusable library
+
+- Create, edit and organize your own tools.
+- Keep a local library instead of hunting through old projects and chat histories.
+- Import tools from ZIP packs, JSON, Python files, text files, clipboard content or folders.
+- Export individual tools and shareable tool packs.
+- Back up and restore your library.
+
+### AI-assisted authoring
+
+Use AI when it adds value, then keep the result as a reusable tool.
+
+- **Copy Prompt:** prepare a structured prompt for ChatGPT, Gemini or another AI assistant.
+- **Generate via API:** optionally generate a tool directly in EditorBinder using a configured OpenAI-compatible API.
+- **Review before saving:** inspect the generated name, notes, parameters and Python code.
+- **Fix Prompt:** send an existing tool and its error context back to an AI assistant for a correction.
+
+The API workflow supports presets for OpenAI, OpenRouter and DeepSeek, as well as custom OpenAI-compatible endpoints. API credentials are read from environment variables. The normal tool library and copy/paste workflow do not require an API key, and EditorBinder does not contact an AI service unless you explicitly use an AI feature.
+
+## Keyboard shortcuts
+
+| Key | Action |
+| --- | --- |
+| <kbd>Ctrl</kbd> + <kbd>F</kbd> | Focus the tool search |
+| <kbd>Ctrl</kbd> + <kbd>N</kbd> | Open Add Tool |
+| <kbd>Enter</kbd> | Copy the selected tool |
+| <kbd>Space</kbd> | Focus the first parameter of the selected tool |
+| <kbd>Up</kbd> / <kbd>Down</kbd> | Select the previous or next tool |
+| <kbd>Delete</kbd> | Delete the selected tool |
+
+Shortcuts apply in the main EditorBinder window. Text-entry controls keep their normal keyboard behavior.
+
+## The Free Core
+
+The 21-tool Free Core covers common scene cleanup, selection, placement, auditing and batch editing.
+
+<details>
+<summary><strong>See all 21 bundled tools</strong></summary>
+
+1. Scene cleanup audit report.
+2. Distribute selected actors in a grid.
+3. Organize selected actors by Static Mesh.
+4. Find broken or suspicious actors.
+5. Transform selected actors.
+6. Randomize selected transform.
+7. Snap selected actors to ground.
+8. Move selected actors to an Outliner folder.
+9. Rename selected actors by pattern.
+10. Replace text in selected actor labels.
+11. Set collision profile on selected actor components.
+12. Select actors using the same Static Mesh asset.
+13. Set selected actor mobility.
+14. Flatten selected actors to the same Z height.
+15. Reset bad selected actor scale.
+16. Select actors by label text.
+17. Select actors by class name.
+18. Report selected actors summary.
+19. Select actors by material name or asset path.
+20. Batch add, remove or replace Actor Tags with undo support.
+21. Audit missing material assignments on selected actors.
+
+</details>
+
+The tracked default library is <code>data/tools.json</code>. It contains the bundled Free Core seed, not your personal working library.
 
 ## Screenshots
 
-Library on first launch:
+| Tool library | Editable parameters |
+| --- | --- |
+| ![EditorBinder library on first launch](docs/screenshots/editorbinder-library-launch.png) | ![EditorBinder parameterized tool controls](docs/screenshots/editorbinder-tool-parameters.png) |
 
-![EditorBinder library on first launch](docs/screenshots/editorbinder-library-launch.png)
+| Create a tool with AI | Save a custom tool |
+| --- | --- |
+| ![EditorBinder AI-assisted Add Tool flow](docs/screenshots/editorbinder-add-tool-ai-flow.png) | ![EditorBinder saved custom tool](docs/screenshots/editorbinder-saved-custom-tool.png) |
 
-Bundled tool with editable parameters:
+## Download
 
-![EditorBinder parameterized tool controls](docs/screenshots/editorbinder-tool-parameters.png)
+**Latest release: [EditorBinder v0.1.3](https://github.com/bartuom/editorbinder/releases/tag/v0.1.3)**
 
-`Add Tool` with an AI marker-format answer ready to review and save:
+| Package | Download | Use it when |
+| --- | --- | --- |
+| Windows EXE | [EditorBinder-0.1.3-win-x64.exe](https://github.com/bartuom/editorbinder/releases/download/v0.1.3/EditorBinder-0.1.3-win-x64.exe) | Recommended for most Windows users. |
+| Portable ZIP | [EditorBinder-0.1.3-win-x64.zip](https://github.com/bartuom/editorbinder/releases/download/v0.1.3/EditorBinder-0.1.3-win-x64.zip) | You want the unpacked portable application folder. |
+| Source/BAT ZIP | [EditorBinder-source-0.1.3.zip](https://github.com/bartuom/editorbinder/releases/download/v0.1.3/EditorBinder-source-0.1.3.zip) | You want the lightweight source package and BAT launch workflow. |
 
-![EditorBinder Add Tool AI flow](docs/screenshots/editorbinder-add-tool-ai-flow.png)
+Use the official [GitHub Releases page](https://github.com/bartuom/editorbinder/releases/latest) for future versions. GitHub's automatically generated **Source code** archives are repository snapshots for developers, not the recommended Windows application download.
 
-Saved user-created tool in the local library:
+The Windows EXE is currently unsigned. Microsoft Defender SmartScreen may show an **Unknown publisher** warning on first launch. Download only from the official GitHub Releases page. If you trust the file, choose **More info** and then **Run anyway**. Code signing remains a release-hardening goal.
 
-![EditorBinder saved custom tool](docs/screenshots/editorbinder-saved-custom-tool.png)
+See [docs/downloads.md](docs/downloads.md) for the full download guide.
 
-## Run From Source
+## Quick start
 
-Double-click:
+1. Download and launch the Windows EXE.
+2. Choose a tool from the library.
+3. Adjust any parameters shown for that tool.
+4. Press **Enter** or click **Copy**.
+5. Open Unreal Editor's Python Console, paste the script and run it.
 
-```text
+To create your own tool, open **Add Tool**, describe the workflow and either copy the prompt to an AI assistant or use the optional API generation workflow. Review the returned code and parameters before saving.
+
+**Safety:** EditorBinder copies scripts for you; it does not execute them in Unreal. Always inspect scripts before running them in a production project. Test new or modified tools in a disposable project or a copy of your level first.
+
+## Run from source
+
+The source/BAT package runs without creating a virtual environment or installing third-party packages. Double-click:
+
+~~~text
 run_app.bat
-```
+~~~
 
-The BAT file starts the app without creating a virtual environment or installing
-third-party packages.
+Other useful launch helpers:
 
-To add shortcuts to Desktop and Start Menu, double-click:
+- <code>install_shortcuts.bat</code> adds Desktop and Start Menu shortcuts.
+- <code>reset_window.bat</code> resets the saved window position and size.
+- <code>enable_portable_mode.bat</code> creates <code>portable.flag</code>, keeping the library and settings in the local <code>data</code> folder.
 
-```text
-install_shortcuts.bat
-```
+To run the Python module manually:
 
-If the window opens off-screen or in a bad position, close the app and run:
-
-```text
-reset_window.bat
-```
-
-To force portable mode for a packaged build, run:
-
-```text
-enable_portable_mode.bat
-```
-
-This creates `portable.flag`, which tells the app to keep `user_tools.json` and
-`settings.json` in the local `data` folder instead of `%APPDATA%`. Delete
-`portable.flag` to return a packaged build to `%APPDATA%` storage. Source runs
-already use the local `data` folder.
-
-Manual run:
-
-```powershell
+~~~powershell
 $env:PYTHONPATH = "src"
 python -m editorbinder
-```
+~~~
 
-## Workflow
+## Source/BAT package contents
 
-Open `Add Tool`, describe what the tool should do, then use
-`Copy Prompt For AI`. Paste that prompt into ChatGPT, Gemini, or another AI
-chat app, then paste the AI answer back into the same dialog. The app extracts
-the tool name, parameters/notes, and Python code.
+The lightweight source/BAT ZIP is an end-user package. It includes the app, Free Core seed, documentation, icon, license files and the launch helpers:
 
-If the AI answer is already in the clipboard, use `Paste And Save` in
-`Add Tool`. The button stays disabled while the clipboard contains a prompt
-instead of a ready AI answer.
-
-Tool parameters can include optional UI metadata:
-
-```python
-# Param: scale | float | 1.0 | Scale | min=0.1 | max=10 | step=0.1
-# Param: mode | enum | selected | Mode | options=selected,all
-```
-
-Supported parameter types are `str`, `text`, `path`, `int`, `float`, `bool`,
-and `enum`.
-
-The tool menu also supports favorites, recently copied tools, parameter reset,
-single-tool export, `Copy Fix Prompt`, and library backup/restore.
-
-See `docs\ai_workflow.md` for marker-format examples, parameter metadata, and
-the fix-prompt workflow.
-
-## Bundled Tools
-
-The default library starts with a 21-tool Free Core focused on everyday Unreal
-scene cleanup, placement, audit, material workflows, and batch editing:
-
-- scene cleanup audit report,
-- distribute selected actors in a grid,
-- organize selected actors by Static Mesh,
-- find broken or suspicious actors,
-- transform selected actors,
-- randomize selected transform,
-- snap selected actors to ground,
-- move selected actors to an Outliner folder,
-- rename selected actors by pattern,
-- replace text in selected actor labels,
-- set collision profile on selected actor components,
-- select actors using the same Static Mesh asset,
-- set selected actor mobility,
-- flatten selected actors to the same Z height,
-- reset bad selected actor scale,
-- select actors by label text,
-- select actors by class name,
-- report selected actors summary,
-- select actors by material name or asset path,
-- batch add, remove, or replace Actor Tags with undo support,
-- audit missing material assignments on selected actors.
-
-The tracked bundled seed is:
-
-```text
-data\tools.json
-```
-
-It should stay clean and contain only the default Free Core tools.
-
-## Importing Tools
-
-`Add Tool` includes an `Import Files` mode. It can import:
-
-- `.zip` files containing an EditorBinder tool pack,
-- `.json` files containing one tool, an array of tools, or `{ "tools": [...] }`,
-- `.txt` files or clipboard text with one or more AI marker-format tools,
-- `.py` files as paste-ready scripts, using `# Tool: Name` or the filename as
-  the tool name,
-- folders containing any of the above.
-
-When imported tool IDs or names already exist, choose `Skip duplicates`,
-`Import as copies`, or `Replace existing` before saving the import. Extracted
-bundle folders are treated as one root pack when they contain
-`editorbinder-pack.json`.
-
-Import examples are available in:
-
-```text
-docs\examples\
-```
-
-See `docs\tool_packs.md` for pack JSON and folder bundle details.
-
-## Data Locations
-
-For source and portable runs, the editable working library file is:
-
-```text
-data\user_tools.json
-```
-
-If `data\user_tools.json` does not exist, the app seeds it from:
-
-```text
-data\tools.json
-```
-
-For packaged/frozen runs, the app stores the library in:
-
-```text
-%APPDATA%\EditorBinder\tools.json
-```
-
-Window size, position, `Always top`, and AI provider settings are saved in:
-
-```text
-data\settings.json
-```
-
-Local Unreal Python API notes and known pitfalls are kept in:
-
-```text
-docs\unreal_api_notes.md
-```
-
-## Documentation
-
-- `QUICKSTART.md` covers the shortest first-run path.
-- `docs\downloads.md` explains which GitHub Release asset to download.
-- `docs\walkthrough.md` shows the visual first-run flow.
-- `docs\ai_workflow.md` explains AI-assisted tool creation.
-- `docs\tool_packs.md` documents importable pack formats.
-- `docs\deployment.md` covers release packaging and verification.
-- `docs\examples\` contains small import fixtures users can try directly.
-
-## Development
-
-Run the test suite from the repository root:
-
-```powershell
-$env:PYTHONPATH = "src"
-python -m unittest discover
-```
-
-Build the source/BAT package:
-
-```powershell
-python tools\package_source_release.py
-```
-
-Build the Windows package:
-
-```powershell
-python tools\package_windows_release.py
-```
-
-This creates both the portable Windows ZIP and the single-file Windows EXE.
-
-## Source/BAT Package Contents
-
-The lightweight source/BAT release is an end-user package. It includes the app,
-Free Core seed, docs, icon, license files, and the BAT files needed to run or
-reset the app:
-
-```text
+~~~text
 run_app.bat
 install_shortcuts.bat
 reset_window.bat
@@ -290,8 +209,64 @@ SECURITY.md
 CODE_OF_CONDUCT.md
 requirements.txt
 pyproject.toml
-```
+~~~
 
-The release package intentionally does not include the test suite, release build
-helpers, optional pack source files, or local runtime files such as
-`data\user_tools.json` and `data\settings.json`.
+The package intentionally excludes the test suite, release build helpers, optional pack source files and local runtime files such as <code>data\user_tools.json</code> and <code>data\settings.json</code>.
+
+## Local data
+
+EditorBinder is local-first. Your working library and settings are stored on your computer.
+
+- Source and portable runs use <code>data/user_tools.json</code> and <code>data/settings.json</code>.
+- Packaged builds normally use the <code>%APPDATA%\EditorBinder</code> folder.
+- The bundled Free Core seed remains in <code>data/tools.json</code>.
+
+See [docs/tool_packs.md](docs/tool_packs.md) for import and export formats, and [docs/ai_workflow.md](docs/ai_workflow.md) for AI authoring, parameters and fix prompts.
+
+## Documentation
+
+- [QUICKSTART.md](QUICKSTART.md) - first-run guide.
+- [docs/downloads.md](docs/downloads.md) - which release asset to download.
+- [docs/walkthrough.md](docs/walkthrough.md) - visual walkthrough.
+- [docs/ai_workflow.md](docs/ai_workflow.md) - AI-assisted creation, API setup and parameter format.
+- [docs/tool_packs.md](docs/tool_packs.md) - importing and sharing tool packs.
+- [docs/unreal_api_notes.md](docs/unreal_api_notes.md) - Unreal Python API notes and known pitfalls.
+- [CONTRIBUTING.md](CONTRIBUTING.md) - how to contribute.
+- [SUPPORT_POLICY.md](SUPPORT_POLICY.md) - support policy.
+- [SECURITY.md](SECURITY.md) - security reporting.
+
+## Development
+
+Requirements: Python 3.10 or newer.
+
+Run the test suite from the repository root:
+
+~~~powershell
+$env:PYTHONPATH = "src"
+python -m unittest discover -s tests
+~~~
+
+Run static checks:
+
+~~~powershell
+python -m ruff check src tests
+python -m compileall -q src tests
+~~~
+
+Build the source/BAT package:
+
+~~~powershell
+python tools\package_source_release.py
+~~~
+
+Build the Windows EXE and portable ZIP:
+
+~~~powershell
+python tools\package_windows_release.py
+~~~
+
+The current release was validated with 215 automated tests and Windows CI on Python 3.10, 3.11 and 3.12.
+
+## License
+
+EditorBinder is released under the [MIT License](LICENSE.txt). See [NOTICE.txt](NOTICE.txt) for third-party notices.
