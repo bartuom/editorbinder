@@ -89,6 +89,50 @@ unreal.log("done")
         issues = lint_tool_code(code)
         self.assertTrue(any(issue.title == "Missing editor transaction" for issue in issues))
 
+    def test_unreal_log_error_satisfies_final_log_check(self) -> None:
+        code = "import unreal\nunreal.log_error('failed to process actors')"
+        issues = lint_tool_code(code)
+        self.assertFalse(any(issue.title == "No final log" for issue in issues))
+
+        # Fallback regex test when AST fails to parse
+        fallback_code = "unreal.log_error('failed')\nif (syntax error:"
+        fallback_issues = lint_tool_code(fallback_code)
+        self.assertFalse(any(issue.title == "No final log" for issue in fallback_issues))
+
+    def test_additional_mutating_calls_trigger_transaction_warning(self) -> None:
+        mutating_calls = [
+            "set_actor_relative_location",
+            "set_actor_relative_rotation",
+            "set_actor_relative_scale3d",
+            "set_actor_relative_transform",
+            "add_actor_world_transform",
+            "add_actor_local_transform",
+            "destroy_component",
+            "register_component",
+            "unregister_component",
+        ]
+        for call in mutating_calls:
+            with self.subTest(call=call):
+                code = f"target.{call}()\nunreal.log('done')"
+                issues = lint_tool_code(code)
+                self.assertTrue(
+                    any(issue.title == "Missing editor transaction" for issue in issues),
+                    f"Expected transaction warning for {call}",
+                )
+
+            with self.subTest(call=f"{call}_in_transaction"):
+                tx_code = (
+                    f"import unreal\n"
+                    f"with unreal.ScopedEditorTransaction('op'):\n"
+                    f"    target.{call}()\n"
+                    f"unreal.log('done')"
+                )
+                tx_issues = lint_tool_code(tx_code)
+                self.assertFalse(
+                    any(issue.title == "Missing editor transaction" for issue in tx_issues),
+                    f"Did not expect transaction warning for {call} inside transaction",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

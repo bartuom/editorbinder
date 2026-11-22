@@ -2,7 +2,7 @@
 
 Status date: 2026-05-31.
 
-This matrix tracks the 18-tool Free Core seed shipped in `data\tools.json`.
+This matrix tracks the 21-tool Free Core seed shipped in `data\tools.json`.
 
 Legend: `PASS` verified, `TODO` not verified yet, `N/A` not applicable.
 
@@ -26,6 +26,9 @@ Legend: `PASS` verified, `TODO` not verified yet, `N/A` not applicable.
 | Select Actors By Label Text | TODO | TODO | TODO | N/A | TODO | TODO |
 | Select Actors By Class Name | TODO | TODO | TODO | N/A | TODO | TODO |
 | Report Selected Actors Summary | TODO | TODO | TODO | N/A | TODO | TODO |
+| Select Actors By Material | TODO | TODO | TODO | N/A | TODO | TODO |
+| Batch Update Actor Tags | TODO | TODO | TODO | TODO | TODO | TODO |
+| Audit Missing Material Slots | TODO | TODO | TODO | N/A | TODO | TODO |
 
 Fresh release QA should cover:
 
