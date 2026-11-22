@@ -92,7 +92,10 @@ def _import_tools_from_file(path: Path) -> list[Tool]:
         return _import_tools_from_json(path)
     if suffix == ".zip":
         return _import_tools_from_zip(path)
-    return import_tools_from_text(path.read_text(encoding="utf-8-sig"), fallback_name=_fallback_name(path))
+    return import_tools_from_text(
+        path.read_text(encoding="utf-8-sig"),
+        fallback_name=_fallback_name(path),
+    )
 
 
 def _import_tools_from_json(path: Path) -> list[Tool]:
@@ -100,16 +103,40 @@ def _import_tools_from_json(path: Path) -> list[Tool]:
     return _import_tools_from_payload(payload, path)
 
 
+def _is_safe_zip_member_name(name: str) -> bool:
+    normalized = name.replace("\\", "/").strip()
+    if not normalized:
+        return False
+    if normalized.startswith("/"):
+        return False
+    if ":" in normalized:
+        return False
+    parts = normalized.split("/")
+    if any(part == ".." for part in parts):
+        return False
+    return True
+
+
+def _validate_zip_archive_members(archive: zipfile.ZipFile) -> None:
+    for name in archive.namelist():
+        if not _is_safe_zip_member_name(name):
+            raise ValueError(f"Unsafe archive member path: {name}")
+
+
 def _import_tools_from_zip(path: Path) -> list[Tool]:
     with zipfile.ZipFile(path) as archive:
+        _validate_zip_archive_members(archive)
         payload_name = _zip_pack_payload_name(archive)
         if not payload_name:
             raise ValueError(f"ZIP does not contain {PACK_JSON_NAME}")
+        if not _is_safe_zip_member_name(payload_name):
+            raise ValueError(f"Unsafe archive member path: {payload_name}")
         payload = json.loads(archive.read(payload_name).decode("utf-8-sig"))
     return _import_tools_from_payload(payload, path)
 
 
 def _zip_pack_payload_name(archive: zipfile.ZipFile) -> str:
+    _validate_zip_archive_members(archive)
     names = [name for name in archive.namelist() if not name.endswith("/")]
     if PACK_JSON_NAME in names:
         return PACK_JSON_NAME

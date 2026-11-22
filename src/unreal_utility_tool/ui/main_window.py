@@ -350,6 +350,7 @@ class UnrealUtilityApp:
         self.copy_feedback_tool_id = ""
         self._copy_feedback_token = 0
         self._copy_feedback_after_id = ""
+        self._active_timer_ids: set[str] = set()
         self._scroll_drag_active = False
         self._scroll_drag_started = False
         self._scroll_drag_start_y = 0
@@ -401,6 +402,7 @@ class UnrealUtilityApp:
         self.root.option_add("*Font", UI_FONT)
         self.root.attributes("-topmost", bool(self.always_top_var.get()))
         self.root.protocol("WM_DELETE_WINDOW", self._close)
+        self.root.bind("<Destroy>", self._on_root_destroy, add="+")
 
         self._configure_ttk()
         self._build_ui()
@@ -821,12 +823,53 @@ class UnrealUtilityApp:
         self._pending_root_width = self._event_int(event, "width", self.root.winfo_width())
         self._schedule_root_resize()
 
+    @property
+    def active_timer_ids(self) -> set[str]:
+        return self._active_timer_ids
+
+    def after(self, ms: int, func=None, *args) -> str | None:
+        try:
+            if func is None:
+                return self.root.after(ms)
+
+            timer_holder: list[str] = [""]
+            executed = False
+
+            def tracked_callback() -> None:
+                nonlocal executed
+                executed = True
+                tid = timer_holder[0]
+                if tid and hasattr(self, "_active_timer_ids"):
+                    self._active_timer_ids.discard(tid)
+                func(*args)
+
+            timer_id = self.root.after(ms, tracked_callback)
+            timer_holder[0] = timer_id
+            if timer_id and not executed and hasattr(self, "_active_timer_ids"):
+                self._active_timer_ids.add(timer_id)
+            return timer_id
+        except (tk.TclError, AttributeError):
+            return None
+
+    def after_cancel(self, timer_id: str | None) -> None:
+        if not timer_id:
+            return
+        if hasattr(self, "_active_timer_ids"):
+            self._active_timer_ids.discard(timer_id)
+        try:
+            self.root.after_cancel(timer_id)
+        except (tk.TclError, AttributeError):
+            pass
+
     def _schedule_root_resize(self) -> None:
         self._cancel_after("_root_resize_after_id")
-        self._root_resize_after_id = self.root.after(48, self._flush_root_resize)
+        self._root_resize_after_id = self.after(48, self._flush_root_resize)
 
     def _flush_root_resize(self) -> None:
-        self._root_resize_after_id = ""
+        if self._root_resize_after_id:
+            if hasattr(self, "_active_timer_ids"):
+                self._active_timer_ids.discard(self._root_resize_after_id)
+            self._root_resize_after_id = ""
         width = self._pending_root_width or self.root.winfo_width()
         spec = self._layout_spec(width)
         mode_changed = spec.mode != self._last_layout_mode
@@ -848,18 +891,24 @@ class UnrealUtilityApp:
 
     def _schedule_tool_rows_rebuild(self) -> None:
         self._cancel_after("_list_resize_after_id")
-        self._list_resize_after_id = self.root.after(90, self._flush_tool_rows_rebuild)
+        self._list_resize_after_id = self.after(90, self._flush_tool_rows_rebuild)
 
     def _flush_tool_rows_rebuild(self) -> None:
-        self._list_resize_after_id = ""
+        if self._list_resize_after_id:
+            if hasattr(self, "_active_timer_ids"):
+                self._active_timer_ids.discard(self._list_resize_after_id)
+            self._list_resize_after_id = ""
         self._rebuild_tool_rows()
 
     def _schedule_tool_wrap_refresh(self) -> None:
         self._cancel_after("_tool_wrap_refresh_after_id")
-        self._tool_wrap_refresh_after_id = self.root.after(120, self._refresh_tool_wraplengths)
+        self._tool_wrap_refresh_after_id = self.after(120, self._refresh_tool_wraplengths)
 
     def _refresh_tool_wraplengths(self) -> None:
-        self._tool_wrap_refresh_after_id = ""
+        if self._tool_wrap_refresh_after_id:
+            if hasattr(self, "_active_timer_ids"):
+                self._active_timer_ids.discard(self._tool_wrap_refresh_after_id)
+            self._tool_wrap_refresh_after_id = ""
         title_wrap = self._card_title_wraplength(self._layout_spec())
         meta_wrap = self._tool_meta_wraplength()
         error_wrap = self._param_label_wraplength()
@@ -888,21 +937,54 @@ class UnrealUtilityApp:
         if not hasattr(self, "details_panel") or not self.details_panel.winfo_ismapped():
             return
         self._cancel_after("_details_sync_after_id")
-        self._details_sync_after_id = self.root.after(80, self._flush_details_label_sync)
+        self._details_sync_after_id = self.after(80, self._flush_details_label_sync)
 
     def _flush_details_label_sync(self) -> None:
-        self._details_sync_after_id = ""
+        if self._details_sync_after_id:
+            if hasattr(self, "_active_timer_ids"):
+                self._active_timer_ids.discard(self._details_sync_after_id)
+            self._details_sync_after_id = ""
         self._sync_details_label_width()
 
     def _cancel_after(self, attr_name: str) -> None:
         after_id = getattr(self, attr_name, "")
         if not after_id:
             return
+        if hasattr(self, "_active_timer_ids"):
+            self._active_timer_ids.discard(after_id)
         try:
             self.root.after_cancel(after_id)
-        except tk.TclError:
+        except (tk.TclError, AttributeError):
             pass
         setattr(self, attr_name, "")
+
+    def _cancel_all_after_timers(self) -> None:
+        for attr_name in (
+            "_filter_refresh_after_id",
+            "_root_resize_after_id",
+            "_list_resize_after_id",
+            "_list_canvas_width_after_id",
+            "_tool_wrap_refresh_after_id",
+            "_details_sync_after_id",
+            "_scroll_overscroll_after_id",
+            "_copy_feedback_after_id",
+        ):
+            self._cancel_after(attr_name)
+        if hasattr(self, "_active_timer_ids"):
+            for timer_id in list(self._active_timer_ids):
+                try:
+                    self.root.after_cancel(timer_id)
+                except (tk.TclError, AttributeError):
+                    pass
+            self._active_timer_ids.clear()
+
+    def _on_root_destroy(self, event=None) -> None:
+        try:
+            if event is not None and getattr(event, "widget", None) is not self.root:
+                return
+        except (tk.TclError, AttributeError):
+            return
+        self._cancel_all_after_timers()
 
     def _sync_details_label_width(self) -> None:
         details_label_width = self._details_label_minsize()
@@ -1258,23 +1340,20 @@ class UnrealUtilityApp:
             pass
 
     def _cancel_scroll_overscroll_animation(self) -> None:
-        if not self._scroll_overscroll_after_id:
-            return
-        try:
-            self.root.after_cancel(self._scroll_overscroll_after_id)
-        except tk.TclError:
-            pass
-        self._scroll_overscroll_after_id = ""
+        self._cancel_after("_scroll_overscroll_after_id")
 
     def _animate_scroll_overscroll_return(self) -> None:
-        self._scroll_overscroll_after_id = ""
+        if self._scroll_overscroll_after_id:
+            if hasattr(self, "_active_timer_ids"):
+                self._active_timer_ids.discard(self._scroll_overscroll_after_id)
+            self._scroll_overscroll_after_id = ""
         if abs(self._scroll_overscroll_offset) < 0.75:
             self._set_scroll_overscroll_offset(0)
             return
 
         self._set_scroll_overscroll_offset(self._scroll_overscroll_offset * 0.62)
         try:
-            self._scroll_overscroll_after_id = self.root.after(16, self._animate_scroll_overscroll_return)
+            self._scroll_overscroll_after_id = self.after(16, self._animate_scroll_overscroll_return)
         except tk.TclError:
             self._scroll_overscroll_after_id = ""
 
@@ -1374,17 +1453,7 @@ class UnrealUtilityApp:
         self._save_settings()
 
     def _close(self) -> None:
-        for attr_name in (
-            "_filter_refresh_after_id",
-            "_root_resize_after_id",
-            "_list_resize_after_id",
-            "_list_canvas_width_after_id",
-            "_tool_wrap_refresh_after_id",
-            "_details_sync_after_id",
-            "_scroll_overscroll_after_id",
-            "_copy_feedback_after_id",
-        ):
-            self._cancel_after(attr_name)
+        self._cancel_all_after_timers()
         self.settings.geometry = self.root.geometry()
         self.settings.always_top = bool(self.always_top_var.get())
         if hasattr(self, "details_panel"):
@@ -1395,17 +1464,24 @@ class UnrealUtilityApp:
                 pass
         self._persist_all_current_param_values()
         self._save_settings()
-        self.root.destroy()
+        try:
+            if self.root.winfo_exists():
+                self.root.destroy()
+        except (tk.TclError, AttributeError):
+            pass
 
     def _save_settings(self) -> None:
         self.settings_store.save(self.settings)
 
     def _schedule_filter_refresh(self) -> None:
         self._cancel_after("_filter_refresh_after_id")
-        self._filter_refresh_after_id = self.root.after(120, self._flush_filter_refresh)
+        self._filter_refresh_after_id = self.after(120, self._flush_filter_refresh)
 
     def _flush_filter_refresh(self) -> None:
-        self._filter_refresh_after_id = ""
+        if self._filter_refresh_after_id:
+            if hasattr(self, "_active_timer_ids"):
+                self._active_timer_ids.discard(self._filter_refresh_after_id)
+            self._filter_refresh_after_id = ""
         self._refresh_list()
 
     def _toggle_filter_panel(self) -> None:
@@ -2946,7 +3022,7 @@ class UnrealUtilityApp:
             self._set_copy_button_feedback(previous_tool_id, active=False)
         self._set_copy_button_feedback(tool_id, active=True)
         self._cancel_after("_copy_feedback_after_id")
-        self._copy_feedback_after_id = self.root.after(
+        self._copy_feedback_after_id = self.after(
             1300,
             lambda current_token=token: self._clear_copy_feedback(current_token),
         )
@@ -2954,7 +3030,10 @@ class UnrealUtilityApp:
     def _clear_copy_feedback(self, token: int) -> None:
         if token != self._copy_feedback_token:
             return
-        self._copy_feedback_after_id = ""
+        if self._copy_feedback_after_id:
+            if hasattr(self, "_active_timer_ids"):
+                self._active_timer_ids.discard(self._copy_feedback_after_id)
+            self._copy_feedback_after_id = ""
         if not self.copy_feedback_tool_id:
             return
         tool_id = self.copy_feedback_tool_id
@@ -3644,10 +3723,13 @@ class UnrealUtilityApp:
     def _schedule_list_canvas_width_sync(self) -> None:
         if self._list_canvas_width_after_id:
             return
-        self._list_canvas_width_after_id = self.root.after(32, self._sync_list_canvas_width)
+        self._list_canvas_width_after_id = self.after(32, self._sync_list_canvas_width)
 
     def _sync_list_canvas_width(self) -> None:
-        self._list_canvas_width_after_id = ""
+        if self._list_canvas_width_after_id:
+            if hasattr(self, "_active_timer_ids"):
+                self._active_timer_ids.discard(self._list_canvas_width_after_id)
+            self._list_canvas_width_after_id = ""
         width = self._pending_list_canvas_width or self.list_canvas.winfo_width()
         if width <= 1:
             return

@@ -15,6 +15,10 @@ _MUTATING_CALLS = {
     "set_actor_location",
     "set_actor_rotation",
     "set_actor_scale3d",
+    "set_actor_relative_location",
+    "set_actor_relative_rotation",
+    "set_actor_relative_scale3d",
+    "set_actor_relative_transform",
     "set_actor_label",
     "set_folder_path",
     "set_editor_property",
@@ -23,6 +27,7 @@ _MUTATING_CALLS = {
     "destroy_actor",
     "attach_to_actor",
     "detach_from_actor",
+    "destroy_component",
     "set_material",
     "set_collision_profile_name",
     "set_collision_enabled",
@@ -35,6 +40,8 @@ _MUTATING_CALLS = {
     "add_actor_local_offset",
     "add_actor_world_rotation",
     "add_actor_local_rotation",
+    "add_actor_world_transform",
+    "add_actor_local_transform",
 }
 _HIT_RESULT_VARIABLES = {"hit", "hit_result", "hitresult", "raw_hit", "trace_result", "result"}
 _HIT_RESULT_PROPERTIES = {"impact_point", "location", "blocking_hit", "b_blocking_hit"}
@@ -62,7 +69,7 @@ def lint_tool_code(code: str) -> tuple[ToolLintIssue, ...]:
         uses_hit_tuple = bool(re.search(r"\.\s*to_tuple\s*\(|\bdef\s+hit_tuple\b", lowered))
         has_debug_log = "debug_log" in lowered
         has_move_call = "set_actor_location" in lowered
-        has_final_log = bool(re.search(r"\bunreal\s*\.\s*log(?:_warning)?\s*\(", lowered))
+        has_final_log = bool(re.search(r"\bunreal\s*\.\s*log(?:_warning|_error)?\s*\(", lowered))
         has_transaction = "scopededitortransaction" in lowered
         looks_mutating = any(name in lowered for name in _MUTATING_CALLS)
         identifiers = set(re.findall(r"\b[A-Za-z_]\w*\b", lowered))
@@ -200,7 +207,7 @@ def _has_unreal_log(tree: ast.AST) -> bool:
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
             continue
-        if node.func.attr.casefold() not in {"log", "log_warning"}:
+        if node.func.attr.casefold() not in {"log", "log_warning", "log_error"}:
             continue
         if isinstance(node.func.value, ast.Name) and node.func.value.id.casefold() == "unreal":
             return True

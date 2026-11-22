@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import os
 import re
 import sys
@@ -72,10 +73,34 @@ def clamp_geometry_to_screen(
     min_width: int = DEFAULT_MIN_WINDOW_WIDTH,
     min_height: int = DEFAULT_MIN_WINDOW_HEIGHT,
 ) -> str | None:
+    try:
+        if not (math.isfinite(screen_width) and math.isfinite(screen_height)):
+            return None
+        screen_width = int(screen_width)
+        screen_height = int(screen_height)
+    except (TypeError, ValueError, OverflowError):
+        return None
+
     if screen_width <= 0 or screen_height <= 0:
         return None
     if not isinstance(geometry, str):
         return None
+
+    try:
+        min_visible = int(min_visible) if math.isfinite(min_visible) else 40
+        min_width = int(min_width) if math.isfinite(min_width) else DEFAULT_MIN_WINDOW_WIDTH
+        min_height = int(min_height) if math.isfinite(min_height) else DEFAULT_MIN_WINDOW_HEIGHT
+    except (TypeError, ValueError, OverflowError):
+        min_visible = 40
+        min_width = DEFAULT_MIN_WINDOW_WIDTH
+        min_height = DEFAULT_MIN_WINDOW_HEIGHT
+
+    if min_visible <= 0:
+        min_visible = 40
+    if min_width <= 0:
+        min_width = DEFAULT_MIN_WINDOW_WIDTH
+    if min_height <= 0:
+        min_height = DEFAULT_MIN_WINDOW_HEIGHT
 
     match = re.match(r"^(\d+)x(\d+)([+-][+-]?\d+)([+-][+-]?\d+)$", geometry.strip())
     if not match:
@@ -89,6 +114,9 @@ def clamp_geometry_to_screen(
         x = int(x_str) if x_str else 0
         y = int(y_str) if y_str else 0
     except (ValueError, TypeError):
+        return None
+
+    if width <= 0 or height <= 0:
         return None
 
     effective_min_width = max(min_width, min_visible)
@@ -118,8 +146,20 @@ def clamp_geometry_to_work_area(
     min_width: int = DEFAULT_MIN_WINDOW_WIDTH,
     min_height: int = DEFAULT_MIN_WINDOW_HEIGHT,
 ) -> str | None:
-    if not isinstance(geometry, str) or len(work_area) != 4:
+    if not isinstance(geometry, str) or not isinstance(work_area, (tuple, list)) or len(work_area) != 4:
         return None
+
+    try:
+        min_width = int(min_width) if math.isfinite(min_width) else DEFAULT_MIN_WINDOW_WIDTH
+        min_height = int(min_height) if math.isfinite(min_height) else DEFAULT_MIN_WINDOW_HEIGHT
+    except (TypeError, ValueError, OverflowError):
+        min_width = DEFAULT_MIN_WINDOW_WIDTH
+        min_height = DEFAULT_MIN_WINDOW_HEIGHT
+
+    if min_width <= 0:
+        min_width = DEFAULT_MIN_WINDOW_WIDTH
+    if min_height <= 0:
+        min_height = DEFAULT_MIN_WINDOW_HEIGHT
 
     match = re.match(r"^(\d+)x(\d+)([+-][+-]?\d+)([+-][+-]?\d+)$", geometry.strip())
     if not match:
@@ -130,12 +170,20 @@ def clamp_geometry_to_work_area(
         height = int(match.group(2))
         x = int(match.group(3).replace("+", ""))
         y = int(match.group(4).replace("+", ""))
-        left, top, right, bottom = (int(value) for value in work_area)
-    except (TypeError, ValueError):
+        coords = [float(value) for value in work_area]
+        if not all(math.isfinite(c) for c in coords):
+            return None
+        left, top, right, bottom = (int(c) for c in coords)
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+    if width <= 0 or height <= 0:
         return None
 
     work_width = right - left
     work_height = bottom - top
+    if work_width <= 0 or work_height <= 0:
+        return None
     if width < min_width or height < min_height:
         return None
     if work_width < min_width or work_height < min_height:
@@ -149,8 +197,25 @@ def clamp_geometry_to_work_area(
 
 
 def set_initial_window_size(root: tk.Tk) -> None:
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
+    try:
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+    except tk.TclError:
+        screen_width = 1920
+        screen_height = 1080
+    try:
+        if not (math.isfinite(screen_width) and math.isfinite(screen_height)):
+            screen_width, screen_height = 1920, 1080
+        else:
+            screen_width, screen_height = int(screen_width), int(screen_height)
+    except (TypeError, ValueError, OverflowError):
+        screen_width, screen_height = 1920, 1080
+
+    if screen_width <= 0:
+        screen_width = 1920
+    if screen_height <= 0:
+        screen_height = 1080
+
     width = min(max(int(screen_width * 0.22), 420), max(screen_width - 80, 380), 500)
     height = min(max(int(screen_height * 0.45), 460), max(screen_height - 80, 320), 560)
     x = max((screen_width - width) // 2, 0)
@@ -205,11 +270,44 @@ def _compute_dialog_geometry(
     min_height = 620
     margin = 16
 
+    try:
+        parent_x = int(parent_x) if math.isfinite(parent_x) else 0
+    except (TypeError, ValueError, OverflowError):
+        parent_x = 0
+    try:
+        parent_y = int(parent_y) if math.isfinite(parent_y) else 0
+    except (TypeError, ValueError, OverflowError):
+        parent_y = 0
+    try:
+        parent_width = int(parent_width) if math.isfinite(parent_width) else DEFAULT_MIN_WINDOW_WIDTH
+        if parent_width <= 0:
+            parent_width = DEFAULT_MIN_WINDOW_WIDTH
+    except (TypeError, ValueError, OverflowError):
+        parent_width = DEFAULT_MIN_WINDOW_WIDTH
+    try:
+        parent_height = int(parent_height) if math.isfinite(parent_height) else DEFAULT_MIN_WINDOW_HEIGHT
+        if parent_height <= 0:
+            parent_height = DEFAULT_MIN_WINDOW_HEIGHT
+    except (TypeError, ValueError, OverflowError):
+        parent_height = DEFAULT_MIN_WINDOW_HEIGHT
+
+    valid_work_area: tuple[int, int, int, int] | None = None
+    if work_area is not None:
+        try:
+            if isinstance(work_area, (tuple, list)) and len(work_area) == 4:
+                coords = [float(v) for v in work_area]
+                if all(math.isfinite(c) for c in coords):
+                    left, top, right, bottom = (int(c) for c in coords)
+                    if right > left and bottom > top:
+                        valid_work_area = (left, top, right, bottom)
+        except (TypeError, ValueError, OverflowError):
+            valid_work_area = None
+
     width = min(max(parent_width + 360, 840), 980)
     height = min(max(parent_height + 220, 640), 820)
 
-    if work_area is not None:
-        left, top, right, bottom = work_area
+    if valid_work_area is not None:
+        left, top, right, bottom = valid_work_area
         work_width = max(right - left, 1)
         work_height = max(bottom - top, 1)
         max_width = max(work_width - (margin * 2), min_width)
@@ -220,16 +318,27 @@ def _compute_dialog_geometry(
     x = parent_x + ((parent_width - width) // 2)
     y = parent_y + ((parent_height - height) // 2)
 
-    if work_area is None:
+    if valid_work_area is None:
         return width, height, x, y
 
-    left, top, right, bottom = work_area
+    left, top, right, bottom = valid_work_area
     x = _clamp_window_axis(x, width, left, right, margin)
     y = _clamp_window_axis(y, height, top, bottom, margin)
     return width, height, x, y
 
 
 def _clamp_window_axis(position: int, size: int, start: int, end: int, margin: int) -> int:
+    try:
+        if not (math.isfinite(position) and math.isfinite(size) and math.isfinite(start) and math.isfinite(end) and math.isfinite(margin)):
+            return 0
+        position = int(position)
+        size = max(0, int(size))
+        start = int(start)
+        end = int(end)
+        margin = max(0, int(margin))
+    except (TypeError, ValueError, OverflowError):
+        return 0
+
     min_position = start + margin
     max_position = end - size - margin
     if max_position < min_position:
@@ -275,18 +384,23 @@ def _monitor_work_area_for_widget(widget: tk.Misc) -> tuple[int, int, int, int] 
         if not ctypes.windll.user32.GetMonitorInfoW(wintypes.HMONITOR(monitor), ctypes.byref(info)):
             return None
 
-        return (
-            int(info.rcWork.left),
-            int(info.rcWork.top),
-            int(info.rcWork.right),
-            int(info.rcWork.bottom),
-        )
+        left = int(info.rcWork.left)
+        top = int(info.rcWork.top)
+        right = int(info.rcWork.right)
+        bottom = int(info.rcWork.bottom)
+        if right <= left or bottom <= top:
+            return None
+        return (left, top, right, bottom)
     except Exception:
         return None
 
 
 def _fallback_work_area_for_widget(widget: tk.Misc) -> tuple[int, int, int, int] | None:
     try:
-        return (0, 0, int(widget.winfo_screenwidth()), int(widget.winfo_screenheight()))
-    except tk.TclError:
+        sw = widget.winfo_screenwidth()
+        sh = widget.winfo_screenheight()
+        if not (math.isfinite(sw) and math.isfinite(sh)) or sw <= 0 or sh <= 0:
+            return None
+        return (0, 0, int(sw), int(sh))
+    except (tk.TclError, TypeError, ValueError):
         return None

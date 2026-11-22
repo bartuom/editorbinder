@@ -325,6 +325,58 @@ class MainWindowInteractionTests(unittest.TestCase):
             self.assertEqual(app._copy_feedback_after_id, "")
             self.assertEqual(app._scroll_overscroll_after_id, "")
 
+    def test_after_tracks_only_pending_callbacks_and_preserves_no_callback_semantics(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            app = self._create_app(temp_dir)
+            called: list[str] = []
+
+            timer_id = app.after(0, lambda: called.append("fired"))
+            self.assertIn(timer_id, app.active_timer_ids)
+            app.root.update()
+
+            self.assertEqual(called, ["fired"])
+            self.assertNotIn(timer_id, app.active_timer_ids)
+
+            active_before = set(app.active_timer_ids)
+            self.assertIsNone(app.after(1))
+            self.assertEqual(app.active_timer_ids, active_before)
+            app._close()
+
+    def test_main_window_destroy_and_close_cancels_all_timers_safely(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            app = self._create_app(temp_dir)
+            tool = app.filtered_tools[0]
+            app._schedule_filter_refresh()
+            app._schedule_root_resize()
+            app._schedule_tool_rows_rebuild()
+            app._schedule_tool_wrap_refresh()
+            app._schedule_list_canvas_width_sync()
+            app._show_copy_feedback(tool.id, tool.name)
+            custom_id = app.after(60000, lambda: None)
+
+            self.assertTrue(app._filter_refresh_after_id)
+            self.assertTrue(app._copy_feedback_after_id)
+            self.assertIn(custom_id, app.active_timer_ids)
+
+            cancelled: list[str] = []
+            original_after_cancel = app.root.after_cancel
+
+            def record_after_cancel(after_id: str) -> None:
+                cancelled.append(after_id)
+                original_after_cancel(after_id)
+
+            app.root.after_cancel = record_after_cancel
+            app._close()
+
+            self.assertEqual(len(app.active_timer_ids), 0)
+            self.assertEqual(app._filter_refresh_after_id, "")
+            self.assertEqual(app._copy_feedback_after_id, "")
+            self.assertIn(custom_id, cancelled)
+
+            # Calling cancel or destroy again after window is destroyed raises no error
+            app._cancel_all_after_timers()
+            app._on_root_destroy(None)
+
 
 if __name__ == "__main__":
     unittest.main()

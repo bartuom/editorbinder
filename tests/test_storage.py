@@ -55,6 +55,21 @@ class ToolLibraryStoreTests(unittest.TestCase):
             self.assertEqual(loaded[0].category, CATEGORY_DEBUG)
             self.assertEqual(loaded[0].code, "print('ok')")
 
+    def test_loads_library_with_utf8_bom(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "tools.json"
+            tool = Tool.create(name="BOM Tool", code="print('bom')")
+            raw_json = json.dumps({"version": 1, "tools": [tool.to_dict()]})
+            path.write_bytes(raw_json.encode("utf-8-sig"))
+            store = ToolLibraryStore(path)
+
+            loaded = store.load_tools()
+
+            self.assertEqual(len(loaded), 1)
+            self.assertEqual(loaded[0].name, "BOM Tool")
+            self.assertEqual(store.last_load_error, "")
+            self.assertEqual(list(Path(temp_dir).glob("tools.corrupt-*")), [])
+
     def test_loads_old_tool_without_category(self) -> None:
         with TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "tools.json"
@@ -179,6 +194,23 @@ class ToolLibraryStoreTests(unittest.TestCase):
             self.assertEqual(len(backups), 1)
             self.assertFalse(path.exists())
             self.assertIn("Could not load tool library", store.last_load_error)
+
+    def test_invalid_utf8_library_is_backed_up_and_returns_empty(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "tools.json"
+            path.write_bytes(b"\x80\x81{\"version\": 1}")
+            store = ToolLibraryStore(path)
+
+            tools = store.load_tools()
+
+            backups = list(Path(temp_dir).glob("tools.corrupt-*.json.bak"))
+            self.assertEqual(tools, [])
+            self.assertEqual(len(backups), 1)
+            self.assertFalse(path.exists())
+            self.assertIn("Could not load tool library", store.last_load_error)
+            self.assertTrue(
+                "codec can't decode" in store.last_load_error or "UnicodeDecodeError" in store.last_load_error
+            )
 
     def test_list_backups_reports_tool_count(self) -> None:
         with TemporaryDirectory() as temp_dir:

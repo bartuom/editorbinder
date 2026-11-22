@@ -48,7 +48,7 @@ class ToolLibraryStore:
             return []
 
         try:
-            payload = json.loads(self.path.read_text(encoding="utf-8"))
+            payload = json.loads(self.path.read_text(encoding="utf-8-sig"))
             raw_tools = self._extract_tool_payload(payload)
             return [Tool.from_dict(raw_tool) for raw_tool in raw_tools]
         except (json.JSONDecodeError, OSError, TypeError, ValueError) as exc:
@@ -64,8 +64,19 @@ class ToolLibraryStore:
             "tools": [tool.to_dict() for tool in tools],
         }
         temp_path = self.path.with_name(f"{self.path.name}.tmp")
-        temp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        temp_path.replace(self.path)
+        try:
+            with open(temp_path, "w", encoding="utf-8") as handle:
+                handle.write(json.dumps(payload, indent=2))
+                handle.flush()
+                os.fsync(handle.fileno())
+            temp_path.replace(self.path)
+        except BaseException:
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except OSError:
+                    pass
+            raise
 
     def create_timestamped_backup(self) -> Path:
         if not self.path.exists():
@@ -121,7 +132,7 @@ class ToolLibraryStore:
         return raw_tools
 
     def _load_tools_from_path(self, path: Path) -> list[Tool]:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
         raw_tools = self._extract_tool_payload(payload)
         return [Tool.from_dict(raw_tool) for raw_tool in raw_tools]
 
@@ -366,7 +377,7 @@ def load_release_seed_tools(storage_path: Path | None = None) -> list[Tool]:
             return []
         if storage_path is not None and seed_path.resolve() == storage_path.resolve():
             return []
-        payload = json.loads(seed_path.read_text(encoding="utf-8"))
+        payload = json.loads(seed_path.read_text(encoding="utf-8-sig"))
         raw_tools = ToolLibraryStore(seed_path)._extract_tool_payload(payload)
         return [Tool.from_dict(raw_tool) for raw_tool in raw_tools]
     except (json.JSONDecodeError, OSError, TypeError, ValueError):
