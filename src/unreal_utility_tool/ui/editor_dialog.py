@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import queue
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
@@ -157,18 +158,34 @@ class ToolEditorDialog:
     def active_timer_ids(self) -> set[str]:
         return self._active_timer_ids
 
-    def after(self, ms: int, func=None, *args) -> str:
+    def after(self, ms: int, func=None, *args) -> str | None:
         try:
-            timer_id = self.window.after(ms, func, *args)
-            self._active_timer_ids.add(timer_id)
+            if func is None:
+                return self.window.after(ms)
+
+            timer_holder: list[str] = [""]
+            executed = False
+
+            def tracked_callback() -> None:
+                nonlocal executed
+                executed = True
+                tid = timer_holder[0]
+                if tid:
+                    self._active_timer_ids.discard(tid)
+                func(*args)
+
+            timer_id = self.window.after(ms, tracked_callback)
+            timer_holder[0] = timer_id
+            if timer_id and not executed:
+                self._active_timer_ids.add(timer_id)
             return timer_id
         except (tk.TclError, AttributeError):
-            return ""
+            return None
 
-    def after_cancel(self, timer_id: str) -> None:
+    def after_cancel(self, timer_id: str | None) -> None:
         self._cancel_timer(timer_id)
 
-    def _cancel_timer(self, timer_id: str) -> None:
+    def _cancel_timer(self, timer_id: str | None) -> None:
         if not timer_id:
             return
         self._active_timer_ids.discard(timer_id)
@@ -735,9 +752,25 @@ class ToolEditorDialog:
         self._set_parse_status(f"Generating with {config.provider}...", MUTED)
 
         examples = self._prompt_examples_for_request(request)
+        result_queue: queue.Queue[tuple[object | None, str]] = queue.Queue(maxsize=1)
+
+        def poll_result() -> None:
+            if self._dialog_closed:
+                return
+            try:
+                result, error = result_queue.get_nowait()
+            except queue.Empty:
+                self.after(50, poll_result)
+                return
+            self._finish_ai_generation(result, error)
+
+        if not self.after(50, poll_result):
+            self.ai_generation_in_progress = False
+            return
+
         thread = threading.Thread(
             target=self._run_ai_generation,
-            args=(config, request, examples, self.tool_type_var.get()),
+            args=(config, request, examples, self.tool_type_var.get(), result_queue),
             daemon=True,
         )
         thread.start()
@@ -748,6 +781,7 @@ class ToolEditorDialog:
         request: str,
         examples: list[PromptExample],
         tool_type: str,
+        result_queue: queue.Queue[tuple[object | None, str]],
     ) -> None:
         result = None
         error = ""
@@ -757,24 +791,7 @@ class ToolEditorDialog:
             error = str(exc)
         except Exception as exc:
             error = f"AI generation failed: {exc}"
-
-        def finish() -> None:
-            if timer_id:
-                self._active_timer_ids.discard(timer_id)
-            if self._dialog_closed:
-                return
-            try:
-                if self.window.winfo_exists():
-                    self._finish_ai_generation(result, error)
-            except (tk.TclError, AttributeError):
-                return
-
-        timer_id = ""
-        try:
-            if not self._dialog_closed:
-                timer_id = self.after(0, finish)
-        except (tk.TclError, AttributeError):
-            pass
+        result_queue.put((result, error))
 
     def _finish_ai_generation(self, result, error: str) -> None:
         if self._dialog_closed:

@@ -2,6 +2,9 @@
 
 import tkinter as tk
 import unittest
+from queue import Queue
+from threading import Thread
+from unittest.mock import patch
 
 from unreal_utility_tool.ui.editor_dialog import ToolEditorDialog
 from unreal_utility_tool.ui.restore_dialog import RestoreBackupDialog
@@ -51,6 +54,45 @@ class DialogCallbackLifecycleTests(unittest.TestCase):
         self.assertTrue(dialog._dialog_closed)
         self.assertEqual(dialog._raise_after_id, "")
         self.root.update()
+
+    def test_after_tracks_only_pending_callbacks_and_preserves_no_callback_semantics(self) -> None:
+        dialog = ToolEditorDialog(self.root)
+        called: list[str] = []
+
+        timer_id = dialog.after(0, lambda: called.append("fired"))
+        self.assertIn(timer_id, dialog.active_timer_ids)
+        dialog.window.update()
+
+        self.assertEqual(called, ["fired"])
+        self.assertNotIn(timer_id, dialog.active_timer_ids)
+
+        active_before = set(dialog.active_timer_ids)
+        self.assertIsNone(dialog.after(1))
+        self.assertEqual(dialog.active_timer_ids, active_before)
+        dialog._close_dialog()
+
+    def test_ai_generation_worker_returns_result_without_touching_tk_timers(self) -> None:
+        dialog = ToolEditorDialog(self.root)
+        result_queue: Queue[tuple[object | None, str]] = Queue(maxsize=1)
+        generated = object()
+
+        with patch(
+            "unreal_utility_tool.ui.editor_dialog.generate_tool_with_repair",
+            return_value=generated,
+        ):
+            with patch.object(dialog, "after", side_effect=AssertionError("worker must not schedule Tk callbacks")) as after:
+                worker = Thread(
+                    target=dialog._run_ai_generation,
+                    args=(None, "request", [], "utility", result_queue),
+                    daemon=True,
+                )
+                worker.start()
+                worker.join(timeout=2)
+
+        self.assertFalse(worker.is_alive())
+        after.assert_not_called()
+        self.assertEqual(result_queue.get_nowait(), (generated, ""))
+        dialog._close_dialog()
 
     def test_tool_editor_on_cancel_cancels_all_active_timers_and_clears_set(self) -> None:
         dialog = ToolEditorDialog(self.root)

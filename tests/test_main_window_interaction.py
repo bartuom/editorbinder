@@ -325,6 +325,23 @@ class MainWindowInteractionTests(unittest.TestCase):
             self.assertEqual(app._copy_feedback_after_id, "")
             self.assertEqual(app._scroll_overscroll_after_id, "")
 
+    def test_after_tracks_only_pending_callbacks_and_preserves_no_callback_semantics(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            app = self._create_app(temp_dir)
+            called: list[str] = []
+
+            timer_id = app.after(0, lambda: called.append("fired"))
+            self.assertIn(timer_id, app.active_timer_ids)
+            app.root.update()
+
+            self.assertEqual(called, ["fired"])
+            self.assertNotIn(timer_id, app.active_timer_ids)
+
+            active_before = set(app.active_timer_ids)
+            self.assertIsNone(app.after(1))
+            self.assertEqual(app.active_timer_ids, active_before)
+            app._close()
+
     def test_main_window_destroy_and_close_cancels_all_timers_safely(self) -> None:
         with TemporaryDirectory() as temp_dir:
             app = self._create_app(temp_dir)

@@ -827,16 +827,31 @@ class UnrealUtilityApp:
     def active_timer_ids(self) -> set[str]:
         return self._active_timer_ids
 
-    def after(self, ms: int, func=None, *args) -> str:
+    def after(self, ms: int, func=None, *args) -> str | None:
         try:
-            timer_id = self.root.after(ms, func, *args)
-            if hasattr(self, "_active_timer_ids"):
+            if func is None:
+                return self.root.after(ms)
+
+            timer_holder: list[str] = [""]
+            executed = False
+
+            def tracked_callback() -> None:
+                nonlocal executed
+                executed = True
+                tid = timer_holder[0]
+                if tid and hasattr(self, "_active_timer_ids"):
+                    self._active_timer_ids.discard(tid)
+                func(*args)
+
+            timer_id = self.root.after(ms, tracked_callback)
+            timer_holder[0] = timer_id
+            if timer_id and not executed and hasattr(self, "_active_timer_ids"):
                 self._active_timer_ids.add(timer_id)
             return timer_id
         except (tk.TclError, AttributeError):
-            return ""
+            return None
 
-    def after_cancel(self, timer_id: str) -> None:
+    def after_cancel(self, timer_id: str | None) -> None:
         if not timer_id:
             return
         if hasattr(self, "_active_timer_ids"):
