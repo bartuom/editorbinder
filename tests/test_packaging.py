@@ -280,6 +280,20 @@ class PackagingTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "private path"):
                     module._reject_disallowed_paths(archive_path.name, set(archive.namelist()))
 
+    def test_build_pyinstaller_onedir_bat_invocations_use_no_standalone_exe_and_forward_args(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        bat_file = root / "build_pyinstaller_onedir.bat"
+        lines = [
+            line.strip()
+            for line in bat_file.read_text(encoding="utf-8").splitlines()
+            if "package_windows_release.py" in line
+        ]
+
+        self.assertGreaterEqual(len(lines), 3)
+        for line in lines:
+            self.assertIn("--no-standalone-exe", line)
+            self.assertIn("%*", line)
+
 
 if __name__ == "__main__":
     unittest.main()

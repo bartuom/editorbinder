@@ -7,21 +7,21 @@ echo Building versioned Windows EXE release...
 echo.
 
 if exist ".build-venv\Scripts\python.exe" (
-    ".build-venv\Scripts\python.exe" tools\package_windows_release.py
+    ".build-venv\Scripts\python.exe" tools\package_windows_release.py --no-standalone-exe %*
     if not errorlevel 1 goto done
     goto failed
 )
 
 where py.exe > nul 2> nul
 if not errorlevel 1 (
-    py -3 tools\package_windows_release.py
+    py -3 tools\package_windows_release.py --no-standalone-exe %*
     if not errorlevel 1 goto done
     goto failed
 )
 
 where python.exe > nul 2> nul
 if not errorlevel 1 (
-    python tools\package_windows_release.py
+    python tools\package_windows_release.py --no-standalone-exe %*
     if not errorlevel 1 goto done
     goto failed
 )
@@ -34,7 +34,7 @@ echo Recommended local build environment:
 echo.
 echo   py -3 -m venv .build-venv
 echo   .build-venv\Scripts\python -m pip install pyinstaller
-echo   .build-venv\Scripts\python tools\package_windows_release.py
+echo   .build-venv\Scripts\python tools\package_windows_release.py --no-standalone-exe %*
 echo.
 pause
 exit /b 1

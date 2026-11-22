@@ -122,7 +122,8 @@ a clean temporary folder, extract them, and check:
 2. Update `src\unreal_utility_tool\__init__.py` version to the same value.
 3. Add a matching `CHANGELOG.md` entry.
 4. Run the full test suite:
-   `python -m unittest discover`
+   `$env:PYTHONPATH = "src"; python -m unittest discover`
+   (or Windows cmd: `set PYTHONPATH=src && python -m unittest discover`)
 5. Build the source ZIP and Windows EXE ZIP.
 6. If code signing is available, sign the standalone EXE and the folder EXE,
    then rebuild the Windows ZIP.
