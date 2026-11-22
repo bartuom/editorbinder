@@ -117,48 +117,43 @@ class MainWindowInteractionTests(unittest.TestCase):
 
         with TemporaryDirectory() as temp_dir:
             app = self._create_app(temp_dir)
-            self.assertGreaterEqual(len(app.filtered_tools), 3)
+            self.assertGreaterEqual(len(app.filtered_tools), 4)
 
             tool0 = app.filtered_tools[0]
             tool1 = app.filtered_tools[1]
             tool2 = app.filtered_tools[2]
+            tool3 = app.filtered_tools[3]
 
             self.assertEqual(app.current_tool_id, tool0.id)
+            self.root.deiconify()
+            self.root.update()
             tool1_btn = app.tool_card_widgets[tool1.id]["card"]
 
-            # Clicking the compact button selects it and focuses it
-            tool1_btn.invoke()
-            self.assertEqual(app.current_tool_id, tool1.id)
-
-            # 1. <Down> shortcut from compact tool row button moves selection down to tool 2
-            ev_down = tk.Event()
-            ev_down.widget = tool1_btn
-            res_down = app._select_next_tool_shortcut(ev_down)
-            self.assertEqual(res_down, "break")
+            # Real Tk key dispatch from a focused compact row button.
+            tool1_btn.focus_force()
+            tool1_btn.event_generate("<Down>")
+            self.root.update()
             self.assertEqual(app.current_tool_id, tool2.id)
 
-            # 2. <Up> shortcut moves selection back up to tool 1
-            ev_up = tk.Event()
-            ev_up.widget = app.root
-            res_up = app._select_previous_tool_shortcut(ev_up)
-            self.assertEqual(res_up, "break")
-            self.assertEqual(app.current_tool_id, tool1.id)
+            # The old row is rebuilt after selection changes, so reacquire its button.
+            tool3_btn = app.tool_card_widgets[tool3.id]["card"]
+            tool3_btn.focus_force()
+            tool3_btn.event_generate("<Up>")
+            self.root.update()
+            self.assertEqual(app.current_tool_id, tool2.id)
 
-            # 3. <Return> shortcut copies the tool
+            tool1_btn = app.tool_card_widgets[tool1.id]["card"]
             copied: list[str] = []
             with patch.object(app, "_copy_code", side_effect=lambda tid: copied.append(tid)):
-                ev_return = tk.Event()
-                ev_return.widget = tool1_btn
-                res_return = app._copy_selected_shortcut(ev_return)
-                self.assertEqual(res_return, "break")
+                tool1_btn.focus_force()
+                tool1_btn.event_generate("<Return>")
+                self.root.update()
                 self.assertEqual(copied, [tool1.id])
 
-            # 4. <space> shortcut focuses/toggles parameters
             with patch.object(app, "_focus_selected_param") as mock_focus:
-                ev_space = tk.Event()
-                ev_space.widget = tool1_btn
-                res_space = app._toggle_selected_params_shortcut(ev_space)
-                self.assertEqual(res_space, "break")
+                tool1_btn.focus_force()
+                tool1_btn.event_generate("<space>")
+                self.root.update()
                 self.assertTrue(mock_focus.called)
 
             # 5. <Delete> shortcut invokes tool deletion
