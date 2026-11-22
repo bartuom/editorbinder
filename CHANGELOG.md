@@ -6,7 +6,7 @@ All notable user-facing changes for EditorBinder are documented here.
 
 ### Added
 
-- Expanded the bundled Free Core catalog from 18 to 21 tools:
+- Expanded the bundled 18-tool Free Core to a 21-tool Free Core catalog:
   - Select Actors By Material
   - Batch Update Actor Tags with undo support
   - Audit Missing Material Slots on selected actors
