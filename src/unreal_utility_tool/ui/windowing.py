@@ -297,9 +297,9 @@ def _compute_dialog_geometry(
             if isinstance(work_area, (tuple, list)) and len(work_area) == 4:
                 coords = [float(v) for v in work_area]
                 if all(math.isfinite(c) for c in coords):
-                    l, t, r, b = (int(c) for c in coords)
-                    if r > l and b > t:
-                        valid_work_area = (l, t, r, b)
+                    left, top, right, bottom = (int(c) for c in coords)
+                    if right > left and bottom > top:
+                        valid_work_area = (left, top, right, bottom)
         except (TypeError, ValueError, OverflowError):
             valid_work_area = None
 
