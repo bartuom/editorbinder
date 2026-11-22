@@ -2,23 +2,40 @@
 
 All notable user-facing changes for EditorBinder are documented here.
 
-## Unreleased
+## 0.1.2 - 2026-11-22
 
 ### Added
 
-- Expanded the bundled 18-tool Free Core to a 21-tool Free Core catalog:
-  - Select Actors By Material
-  - Batch Update Actor Tags with undo support
-  - Audit Missing Material Slots on selected actors
-- Added focused Ruff static checks to CI and a `dev` extra for local development.
+- Expanded the bundled 18-tool Free Core into a 21-tool Free Core catalog:
+  - Select Actors By Material, with material-name and asset-path matching.
+  - Batch Update Actor Tags, with add, remove, replace, and undo support.
+  - Audit Missing Material Slots on selected actors, with optional selection of affected actors.
+- Added focused Ruff static checks to the GitHub Actions CI matrix.
+
+### Improved
+
+- Hardened AI provider URL validation, including HTTPS enforcement and local-loopback HTTP support.
+- Preserved query parameters in AI endpoint URLs, redacted provider secrets from errors, and rejected truncated model responses.
+- Improved AI marker parsing for incomplete code fences and multiple response sections.
+- Improved numeric parameter scrubbing while preserving normal text selection and keyboard shortcuts.
+- Improved window recovery across monitor changes and cancelled delayed UI callbacks when dialogs close.
+- Improved code-editor highlighting for multiline docstrings and token priority.
+- Improved the Unreal Python tool linter with syntax-aware mutation, transaction, logging, and HitResult checks.
+- Improved onedir packaging to avoid a redundant standalone EXE build and forward command-line arguments.
 
 ### Fixed
 
-- Corrected AI endpoint URL construction when base URLs include query parameters.
-- Redacted API keys from provider error messages and rejected token-truncated AI responses.
-- Hardened AI marker parsing and temperature validation.
-- Recovered saved window positions across monitor changes and cancelled pending UI callbacks on close.
-- Excluded generated Python distribution metadata from source ZIP releases.
+- Restricted parameter substitution to top-level assignments and rejected non-finite numeric values.
+- Fixed keyboard interaction regressions in compact tool rows.
+- Fixed generated egg-info/dist-info metadata leaking into source ZIP packages.
+- Fixed release-catalog registration and coverage for the three new Free Core tools.
+
+### Validation
+
+- 191 automated tests passed on Python 3.10, 3.11, and 3.12 in local and release validation.
+- Ruff static checks passed.
+- Windows PyInstaller onedir and standalone packaging verified locally.
+- Source ZIP and wheel build/install smoke tests passed.
 
 ## 0.1.1 - 2026-06-01
 

@@ -69,6 +69,7 @@ class PackagingTests(unittest.TestCase):
             "docs/deployment.md",
             "docs/preset_test_matrix.md",
             "docs/tool_packs.md",
+            "docs/releases/v0.1.2.md",
         ]:
             self.assertIn(required_file, files)
 
@@ -129,6 +130,8 @@ class PackagingTests(unittest.TestCase):
 
         self.assertIn("Initial open-source Free Core release", changelog)
         self.assertIn("21-tool Free Core", changelog)
+        verifier = _load_verify_module()
+        self.assertEqual(verifier.FREE_CORE_COUNT, 21)
         self.assertIn("community-supported open source", support)
         self.assertNotIn("pur" + "chase", support.casefold())
         self.assertNotIn("re" + "fund", support.casefold())
@@ -299,7 +302,8 @@ class PackagingTests(unittest.TestCase):
             root = Path(temp_dir)
             source_file = root / "src" / "editorbinder" / "app.py"
             egg_info = root / "src" / "editorbinder.egg-info" / "PKG-INFO"
-            dist_info = root / "src" / "editorbinder-0.1.1.dist-info" / "METADATA"
+            version = module.project_version(Path(__file__).resolve().parents[1])
+            dist_info = root / "src" / f"editorbinder-{version}.dist-info" / "METADATA"
             source_file.parent.mkdir(parents=True)
             egg_info.parent.mkdir(parents=True)
             dist_info.parent.mkdir(parents=True)
