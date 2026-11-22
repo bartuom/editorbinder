@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -82,8 +83,8 @@ class AppSettingsStore:
         if not self.path.exists():
             return AppSettings()
         try:
-            payload = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+            payload = json.loads(self.path.read_text(encoding="utf-8-sig"))
+        except (OSError, UnicodeError, json.JSONDecodeError):
             return AppSettings()
         if not isinstance(payload, dict):
             return AppSettings()
@@ -92,8 +93,19 @@ class AppSettingsStore:
     def save(self, settings: AppSettings) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temp_path = self.path.with_name(f"{self.path.name}.tmp")
-        temp_path.write_text(json.dumps(settings.to_dict(), indent=2), encoding="utf-8")
-        temp_path.replace(self.path)
+        try:
+            with open(temp_path, "w", encoding="utf-8") as handle:
+                handle.write(json.dumps(settings.to_dict(), indent=2))
+                handle.flush()
+                os.fsync(handle.fileno())
+            temp_path.replace(self.path)
+        except BaseException:
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except OSError:
+                    pass
+            raise
 
 
 def resolve_default_settings_path() -> Path:

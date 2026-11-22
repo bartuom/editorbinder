@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 from tempfile import TemporaryDirectory
 
 from unreal_utility_tool.settings import AppSettings, AppSettingsStore
@@ -74,6 +75,36 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.ai_timeout_seconds, 30)
         self.assertEqual(settings.ai_temperature, 0.1)
         self.assertEqual(settings.ai_max_tokens, 2000)
+
+    def test_loads_settings_with_utf8_bom(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "settings.json"
+            path.write_bytes('{"geometry": "640x480+10+20"}'.encode("utf-8-sig"))
+            settings = AppSettingsStore(path).load()
+
+        self.assertEqual(settings.geometry, "640x480+10+20")
+
+    def test_invalid_utf8_settings_load_defaults(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "settings.json"
+            path.write_bytes(b"\x80\x81invalid")
+            settings = AppSettingsStore(path).load()
+
+        self.assertEqual(settings, AppSettings())
+
+    def test_save_cleans_temp_file_and_preserves_existing_settings_on_fsync_error(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "settings.json"
+            original = '{"geometry": "640x480+10+20"}'
+            path.write_text(original, encoding="utf-8")
+            store = AppSettingsStore(path)
+
+            with patch("unreal_utility_tool.settings.os.fsync", side_effect=OSError("disk full")):
+                with self.assertRaises(OSError):
+                    store.save(AppSettings(geometry="800x600+30+40"))
+
+            self.assertEqual(path.read_text(encoding="utf-8"), original)
+            self.assertFalse(path.with_name("settings.json.tmp").exists())
 
     def test_old_settings_without_details_width_load_default(self) -> None:
         with TemporaryDirectory() as temp_dir:
