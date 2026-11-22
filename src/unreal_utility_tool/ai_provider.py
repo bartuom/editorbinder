@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from typing import Mapping, Sequence
@@ -172,8 +174,45 @@ def api_key_status(config: AiProviderConfig, environ: Mapping[str, str] | None =
     return False, f"Set {names} before using Generate."
 
 
+_LOOPBACK_HOSTNAMES = {"localhost", "127.0.0.1", "::1"}
+
+
+def _is_loopback_host(hostname: str) -> bool:
+    if not hostname:
+        return False
+    if hostname in _LOOPBACK_HOSTNAMES:
+        return True
+    try:
+        return ipaddress.ip_address(hostname).is_loopback
+    except ValueError:
+        return False
+
+
 def chat_completions_url(base_url: str) -> str:
-    base = base_url.strip().rstrip("/")
+    cleaned = base_url.strip()
+    try:
+        parsed = urllib.parse.urlparse(cleaned)
+    except ValueError as exc:
+        raise AiProviderError(f"Invalid AI base URL: {exc}") from exc
+
+    scheme = parsed.scheme.lower()
+    if scheme not in ("http", "https"):
+        raise AiProviderError(f"Unsupported AI base URL scheme: '{scheme}'. Use https or http.")
+
+    try:
+        hostname = (parsed.hostname or "").lower()
+    except ValueError as exc:
+        raise AiProviderError(f"Invalid AI base URL host: {exc}") from exc
+
+    if not parsed.netloc or not hostname:
+        raise AiProviderError("AI base URL must include a valid host.")
+
+    if scheme == "http" and not _is_loopback_host(hostname):
+        raise AiProviderError(
+            "Insecure HTTP is only permitted for local loopback hosts (localhost, 127.0.0.1). Use HTTPS for remote providers."
+        )
+
+    base = cleaned.rstrip("/")
     if base.endswith("/chat/completions"):
         return base
     return f"{base}/chat/completions"

@@ -65,6 +65,103 @@ class AiProviderTests(unittest.TestCase):
             "https://api.deepseek.com/chat/completions",
         )
 
+    def test_chat_completions_url_remote_https_succeeds(self) -> None:
+        self.assertEqual(
+            chat_completions_url("https://api.openai.com/v1"),
+            "https://api.openai.com/v1/chat/completions",
+        )
+        self.assertEqual(
+            chat_completions_url("https://api.deepseek.com"),
+            "https://api.deepseek.com/chat/completions",
+        )
+        self.assertEqual(
+            chat_completions_url("https://api.deepseek.com/"),
+            "https://api.deepseek.com/chat/completions",
+        )
+        self.assertEqual(
+            chat_completions_url("https://api.deepseek.com/chat/completions"),
+            "https://api.deepseek.com/chat/completions",
+        )
+        self.assertEqual(
+            chat_completions_url("https://api.deepseek.com/chat/completions/"),
+            "https://api.deepseek.com/chat/completions",
+        )
+
+    def test_chat_completions_url_local_loopback_http_succeeds(self) -> None:
+        self.assertEqual(
+            chat_completions_url("http://localhost:11434/v1"),
+            "http://localhost:11434/v1/chat/completions",
+        )
+        self.assertEqual(
+            chat_completions_url("http://127.0.0.1:1234/v1"),
+            "http://127.0.0.1:1234/v1/chat/completions",
+        )
+        self.assertEqual(
+            chat_completions_url("http://[::1]:8080/v1"),
+            "http://[::1]:8080/v1/chat/completions",
+        )
+        self.assertEqual(
+            chat_completions_url("http://localhost:11434/chat/completions"),
+            "http://localhost:11434/chat/completions",
+        )
+
+    def test_chat_completions_url_rejects_remote_http(self) -> None:
+        remote_urls = (
+            "http://api.openai.com/v1",
+            "http://api.deepseek.com",
+            "http://example.com/v1",
+            "http://192.168.1.100:8000/v1",
+        )
+        for url in remote_urls:
+            with self.subTest(url=url):
+                with self.assertRaises(AiProviderError) as ctx:
+                    chat_completions_url(url)
+                self.assertEqual(
+                    str(ctx.exception),
+                    "Insecure HTTP is only permitted for local loopback hosts (localhost, 127.0.0.1). Use HTTPS for remote providers.",
+                )
+
+    def test_chat_completions_url_rejects_non_http_schemes(self) -> None:
+        cases = (
+            ("file:///etc/hosts", "file"),
+            ("ftp://files.example.com/v1", "ftp"),
+            ("data:text/plain;base64,SGVsbG8=", "data"),
+            ("api.openai.com/v1", ""),
+            ("   ", ""),
+        )
+        for url, expected_scheme in cases:
+            with self.subTest(url=url):
+                with self.assertRaises(AiProviderError) as ctx:
+                    chat_completions_url(url)
+                self.assertEqual(
+                    str(ctx.exception),
+                    f"Unsupported AI base URL scheme: '{expected_scheme}'. Use https or http.",
+                )
+
+    def test_chat_completions_url_rejects_malformed_urls(self) -> None:
+        malformed_urls = (
+            "https://",
+            "http://",
+            "http://:8080",
+            "http://[::1",
+            "http://[invalid-ipv6]",
+        )
+        for url in malformed_urls:
+            with self.subTest(url=url):
+                with self.assertRaises(AiProviderError):
+                    chat_completions_url(url)
+
+    def test_client_complete_rejects_insecure_remote_http(self) -> None:
+        config = AiProviderConfig(
+            base_url="http://api.openai.com/v1",
+            model="gpt-4o",
+            api_key_env="OPENAI_API_KEY",
+        )
+        client = OpenAiCompatibleClient(config, environ={"OPENAI_API_KEY": "sk-test"})
+        with self.assertRaises(AiProviderError) as ctx:
+            client.complete("hello")
+        self.assertIn("Insecure HTTP is only permitted for local loopback hosts", str(ctx.exception))
+
     def test_extract_chat_message_supports_openai_shape(self) -> None:
         raw = json.dumps({"choices": [{"message": {"content": "hello"}}]})
 
