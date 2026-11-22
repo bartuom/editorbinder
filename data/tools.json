@@ -454,11 +454,11 @@
       ],
       "category": "Selection",
       "workflows": [
-        "Selection / Filtering",
-        "Material / Asset Management"
+        "Materials",
+        "Scene Cleanup"
       ],
       "roles": [
-        "Level Designer",
+        "Level Artist",
         "Environment Artist",
         "Tech Artist"
       ],
@@ -478,13 +478,13 @@
         "tags",
         "params"
       ],
-      "category": "Editing",
+      "category": "Organization",
       "workflows": [
-        "Batch Editing",
-        "Actor Metadata"
+        "Naming & Organization",
+        "Scene Cleanup"
       ],
       "roles": [
-        "Level Designer",
+        "Level Artist",
         "Tech Artist",
         "Pipeline Artist"
       ],
@@ -506,8 +506,8 @@
       ],
       "category": "Debug",
       "workflows": [
+        "Materials",
         "Scene Cleanup",
-        "Material / Asset Management",
         "Reports / Handoff"
       ],
       "roles": [
