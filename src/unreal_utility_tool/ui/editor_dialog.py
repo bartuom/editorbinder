@@ -111,6 +111,7 @@ class ToolEditorDialog:
         self._raise_after_id = ""
         self.ai_last_response_text = ""
         self.ai_last_error_text = ""
+        self._active_timer_ids: set[str] = set()
 
         self.window = tk.Toplevel(parent)
         self.window.title("Edit Tool" if tool else "Add Tool")
@@ -149,7 +150,55 @@ class ToolEditorDialog:
         self._build_shell()
         self._render_mode()
         self._raise_near_parent()
-        self.window.protocol("WM_DELETE_WINDOW", self._cancel)
+        self.window.protocol("WM_DELETE_WINDOW", self._on_cancel)
+        self.window.bind("<Destroy>", self._on_window_destroy, add="+")
+
+    @property
+    def active_timer_ids(self) -> set[str]:
+        return self._active_timer_ids
+
+    def after(self, ms: int, func=None, *args) -> str:
+        try:
+            timer_id = self.window.after(ms, func, *args)
+            self._active_timer_ids.add(timer_id)
+            return timer_id
+        except (tk.TclError, AttributeError):
+            return ""
+
+    def after_cancel(self, timer_id: str) -> None:
+        self._cancel_timer(timer_id)
+
+    def _cancel_timer(self, timer_id: str) -> None:
+        if not timer_id:
+            return
+        self._active_timer_ids.discard(timer_id)
+        try:
+            self.window.after_cancel(timer_id)
+        except (tk.TclError, AttributeError):
+            pass
+
+    def _cancel_all_timers(self) -> None:
+        if self._raise_after_id:
+            try:
+                self.window.after_cancel(self._raise_after_id)
+            except (tk.TclError, AttributeError):
+                pass
+            self._raise_after_id = ""
+        for timer_id in list(self._active_timer_ids):
+            try:
+                self.window.after_cancel(timer_id)
+            except (tk.TclError, AttributeError):
+                pass
+        self._active_timer_ids.clear()
+
+    def _on_window_destroy(self, event=None) -> None:
+        try:
+            if event is not None and getattr(event, "widget", None) is not self.window:
+                return
+        except (tk.TclError, AttributeError):
+            return
+        self._dialog_closed = True
+        self._cancel_all_timers()
 
     def _set_initial_dialog_geometry(self) -> None:
         self.parent.update_idletasks()
@@ -172,16 +221,20 @@ class ToolEditorDialog:
         self.window.update_idletasks()
         self.window.lift(self.parent)
         self.window.focus_force()
-        self._raise_after_id = self.window.after(50, self._raise_near_parent_if_open)
+        if self._raise_after_id:
+            self._cancel_timer(self._raise_after_id)
+        self._raise_after_id = self.after(50, self._raise_near_parent_if_open)
 
     def _raise_near_parent_if_open(self) -> None:
-        self._raise_after_id = ""
+        if self._raise_after_id:
+            self._active_timer_ids.discard(self._raise_after_id)
+            self._raise_after_id = ""
         if self._dialog_closed:
             return
         try:
             if self.window.winfo_exists():
                 self.window.lift(self.parent)
-        except tk.TclError:
+        except (tk.TclError, AttributeError):
             return
 
     def _build_shell(self) -> None:
@@ -706,26 +759,37 @@ class ToolEditorDialog:
             error = f"AI generation failed: {exc}"
 
         def finish() -> None:
+            if timer_id:
+                self._active_timer_ids.discard(timer_id)
             if self._dialog_closed:
                 return
             try:
                 if self.window.winfo_exists():
                     self._finish_ai_generation(result, error)
-            except tk.TclError:
+            except (tk.TclError, AttributeError):
                 return
 
+        timer_id = ""
         try:
             if not self._dialog_closed:
-                self.window.after(0, finish)
-        except tk.TclError:
+                timer_id = self.after(0, finish)
+        except (tk.TclError, AttributeError):
             pass
 
     def _finish_ai_generation(self, result, error: str) -> None:
         if self._dialog_closed:
             return
+        try:
+            if not self.window.winfo_exists():
+                return
+        except (tk.TclError, AttributeError):
+            return
         self.ai_generation_in_progress = False
-        if self.generate_ai_button is not None:
-            self.generate_ai_button.configure(state=tk.NORMAL, cursor="hand2")
+        try:
+            if self.generate_ai_button is not None and self.generate_ai_button.winfo_exists():
+                self.generate_ai_button.configure(state=tk.NORMAL, cursor="hand2")
+        except (tk.TclError, AttributeError):
+            pass
 
         if error:
             self.ai_last_error_text = error
@@ -738,19 +802,22 @@ class ToolEditorDialog:
 
         self.ai_last_response_text = result.raw_response_text or result.response_text
         self.ai_last_error_text = result.error
-        if self.ai_text is not None:
-            self.ai_text.delete("1.0", tk.END)
-            self.ai_text.insert("1.0", result.response_text)
-        self._refresh_ai_preview()
-        self._refresh_paste_and_save_button()
+        try:
+            if self.ai_text is not None and self.ai_text.winfo_exists():
+                self.ai_text.delete("1.0", tk.END)
+                self.ai_text.insert("1.0", result.response_text)
+            self._refresh_ai_preview()
+            self._refresh_paste_and_save_button()
 
-        if result.ok:
-            status = "Generated and validated."
-            if result.repaired:
-                status += " One automatic repair was applied."
-            self._set_parse_status(status, SUCCESS)
-        else:
-            self._set_parse_status(result.error or "Generated response is not ready to save.", WARNING)
+            if result.ok:
+                status = "Generated and validated."
+                if result.repaired:
+                    status += " One automatic repair was applied."
+                self._set_parse_status(status, SUCCESS)
+            else:
+                self._set_parse_status(result.error or "Generated response is not ready to save.", WARNING)
+        except (tk.TclError, AttributeError):
+            pass
 
     def _copy_ai_response(self) -> None:
         text = self.ai_last_response_text
@@ -1465,9 +1532,12 @@ class ToolEditorDialog:
             self.troubleshooting_text.configure(state="disabled")
 
     def _set_parse_status(self, message: str, color: str = MUTED) -> None:
-        self.parse_status_var.set(message)
-        if self.parse_status_label is not None:
-            self.parse_status_label.configure(fg=color)
+        try:
+            self.parse_status_var.set(message)
+            if self.parse_status_label is not None and self.parse_status_label.winfo_exists():
+                self.parse_status_label.configure(fg=color)
+        except (tk.TclError, AttributeError):
+            pass
 
     def _pull_ai_into_manual(self) -> None:
         if self.ai_text is None:
@@ -1581,22 +1651,21 @@ class ToolEditorDialog:
             parent=self.window,
         )
 
-    def _cancel(self) -> None:
+    def _on_cancel(self) -> None:
         self._close_dialog()
+
+    def _cancel(self) -> None:
+        self._on_cancel()
 
     def _close_dialog(self) -> None:
         if self._dialog_closed:
             return
         self._dialog_closed = True
-        if self._raise_after_id:
-            try:
-                self.window.after_cancel(self._raise_after_id)
-            except tk.TclError:
-                pass
-            self._raise_after_id = ""
+        self._cancel_all_timers()
         try:
-            self.window.destroy()
-        except tk.TclError:
+            if self.window.winfo_exists():
+                self.window.destroy()
+        except (tk.TclError, AttributeError):
             pass
 
 
