@@ -25,9 +25,16 @@ _MUTATING_CALLS = {
     "detach_from_actor",
     "set_material",
     "set_collision_profile_name",
+    "set_collision_enabled",
+    "set_actor_enable_collision",
     "set_mobility",
     "set_static_mesh",
+    "set_actor_transform",
     "set_actor_hidden_in_game",
+    "add_actor_world_offset",
+    "add_actor_local_offset",
+    "add_actor_world_rotation",
+    "add_actor_local_rotation",
 }
 _HIT_RESULT_VARIABLES = {"hit", "hit_result", "hitresult", "raw_hit", "trace_result", "result"}
 _HIT_RESULT_PROPERTIES = {"impact_point", "location", "blocking_hit", "b_blocking_hit"}
@@ -66,8 +73,8 @@ def lint_tool_code(code: str) -> tuple[ToolLintIssue, ...]:
         uses_hit_tuple = "to_tuple" in called_names or "hit_tuple" in function_names
         has_debug_log = "debug_log" in called_names or "debug_log" in function_names
         has_move_call = "set_actor_location" in called_names
-        has_final_log = bool({"log", "log_warning"} & called_names)
-        has_transaction = "scopededitortransaction" in called_names
+        has_final_log = _has_unreal_log(tree)
+        has_transaction = _has_editor_transaction(tree)
         looks_mutating = bool(_MUTATING_CALLS & called_names)
         identifiers = identifier_names
 
@@ -187,6 +194,33 @@ def _function_names(tree: ast.AST) -> set[str]:
         for node in ast.walk(tree)
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
+
+
+def _has_unreal_log(tree: ast.AST) -> bool:
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr.casefold() not in {"log", "log_warning"}:
+            continue
+        if isinstance(node.func.value, ast.Name) and node.func.value.id.casefold() == "unreal":
+            return True
+    return False
+
+
+def _has_editor_transaction(tree: ast.AST) -> bool:
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if isinstance(node.func, ast.Name) and node.func.id.casefold() == "scopededitortransaction":
+            return True
+        if (
+            isinstance(node.func, ast.Attribute)
+            and node.func.attr.casefold() == "scopededitortransaction"
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id.casefold() == "unreal"
+        ):
+            return True
+    return False
 
 
 def _direct_hit_property_patterns(tree: ast.AST | None, code: str) -> list[str]:

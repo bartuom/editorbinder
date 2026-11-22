@@ -80,6 +80,15 @@ unreal.log("done")
         issues = lint_tool_code(code)
         self.assertFalse(any(issue.title == "Direct HitResult property access" for issue in issues))
 
+    def test_unreal_log_is_required_not_an_arbitrary_logger(self) -> None:
+        issues = lint_tool_code("logger.log('done')")
+        self.assertTrue(any(issue.title == "No final log" for issue in issues))
+
+    def test_unrelated_transaction_method_does_not_suppress_warning(self) -> None:
+        code = "transaction.ScopedEditorTransaction('not Unreal')\nactor.destroy_actor()\nunreal.log('done')"
+        issues = lint_tool_code(code)
+        self.assertTrue(any(issue.title == "Missing editor transaction" for issue in issues))
+
 
 if __name__ == "__main__":
     unittest.main()
