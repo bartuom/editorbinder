@@ -75,6 +75,32 @@ class WindowingRecoveryTests(unittest.TestCase):
         self.assertIsNone(clamp_geometry_to_screen("500x400+100+100", screen_width=-1920, screen_height=1080))
         self.assertIsNone(clamp_geometry_to_screen("500x400+100+100", screen_width=1920, screen_height=0))
 
+    def test_rejects_non_finite_screen_dimensions(self) -> None:
+        self.assertIsNone(clamp_geometry_to_screen("500x400+100+100", screen_width=float("nan"), screen_height=1080))
+        self.assertIsNone(clamp_geometry_to_screen("500x400+100+100", screen_width=1920, screen_height=float("inf")))
+
+    def test_rejects_non_finite_or_inverted_work_areas(self) -> None:
+        invalid_work_areas = [
+            (0, 0, float("nan"), 1080),
+            (0, 0, 0, 1080),
+            (0, 0, 1920, 0),
+            (1920, 0, 0, 1080),
+        ]
+        for work_area in invalid_work_areas:
+            with self.subTest(work_area=work_area):
+                self.assertIsNone(clamp_geometry_to_work_area("500x400+100+100", work_area))
+
+    def test_invalid_custom_minimums_fall_back_to_safe_defaults(self) -> None:
+        geometry = "500x400+100+100"
+        self.assertEqual(
+            clamp_geometry_to_screen(geometry, 1920, 1080, min_visible=-5),
+            geometry,
+        )
+        self.assertEqual(
+            clamp_geometry_to_screen(geometry, 1920, 1080, min_width="invalid"),
+            geometry,
+        )
+
     def test_custom_min_width_and_height(self) -> None:
         result = clamp_geometry_to_screen(
             "200x200+5000+5000",
