@@ -108,6 +108,8 @@ class ToolEditorDialog:
         self.parse_status_label: tk.Label | None = None
         self.ai_key_status_label: tk.Label | None = None
         self.ai_generation_in_progress = False
+        self._dialog_closed = False
+        self._raise_after_id = ""
         self.ai_last_response_text = ""
         self.ai_last_error_text = ""
 
@@ -171,7 +173,17 @@ class ToolEditorDialog:
         self.window.update_idletasks()
         self.window.lift(self.parent)
         self.window.focus_force()
-        self.window.after(50, lambda: self.window.lift(self.parent))
+        self._raise_after_id = self.window.after(50, self._raise_near_parent_if_open)
+
+    def _raise_near_parent_if_open(self) -> None:
+        self._raise_after_id = ""
+        if self._dialog_closed:
+            return
+        try:
+            if self.window.winfo_exists():
+                self.window.lift(self.parent)
+        except tk.TclError:
+            return
 
     def _build_shell(self) -> None:
         header = tk.Frame(self.window, bg=HEADER_BG, padx=18, pady=12)
@@ -695,15 +707,23 @@ class ToolEditorDialog:
             error = f"AI generation failed: {exc}"
 
         def finish() -> None:
-            if self.window.winfo_exists():
-                self._finish_ai_generation(result, error)
+            if self._dialog_closed:
+                return
+            try:
+                if self.window.winfo_exists():
+                    self._finish_ai_generation(result, error)
+            except tk.TclError:
+                return
 
         try:
-            self.window.after(0, finish)
+            if not self._dialog_closed:
+                self.window.after(0, finish)
         except tk.TclError:
             pass
 
     def _finish_ai_generation(self, result, error: str) -> None:
+        if self._dialog_closed:
+            return
         self.ai_generation_in_progress = False
         if self.generate_ai_button is not None:
             self.generate_ai_button.configure(state=tk.NORMAL, cursor="hand2")
@@ -1147,7 +1167,7 @@ class ToolEditorDialog:
             messagebox.showwarning("No Tools Found", "Select files or a folder with importable tools.", parent=self.window)
             return
         self.result = ToolImportBatch(list(self.imported_tools), self.import_policy_var.get())
-        self.window.destroy()
+        self._close_dialog()
 
     def _existing_tool_names(self) -> set[str]:
         return {_normalize_preview_name(tool.name) for tool in self.existing_tools}
@@ -1488,7 +1508,7 @@ class ToolEditorDialog:
             roles=self._metadata_roles(),
             visibility=self.visibility_var.get(),
         )
-        self.window.destroy()
+        self._close_dialog()
 
     def _on_code_changed(self) -> None:
         if self.code_text is None:
@@ -1550,7 +1570,7 @@ class ToolEditorDialog:
                 roles=roles,
                 visibility=visibility,
             )
-        self.window.destroy()
+        self._close_dialog()
 
     def _confirm_syntax_if_needed(self, code: str) -> bool:
         syntax_result = validate_tool_code(code)
@@ -1563,7 +1583,22 @@ class ToolEditorDialog:
         )
 
     def _cancel(self) -> None:
-        self.window.destroy()
+        self._close_dialog()
+
+    def _close_dialog(self) -> None:
+        if self._dialog_closed:
+            return
+        self._dialog_closed = True
+        if self._raise_after_id:
+            try:
+                self.window.after_cancel(self._raise_after_id)
+            except tk.TclError:
+                pass
+            self._raise_after_id = ""
+        try:
+            self.window.destroy()
+        except tk.TclError:
+            pass
 
 
 def _normalize_preview_name(name: str) -> str:

@@ -18,6 +18,8 @@ class RestoreBackupDialog:
         self.parent = parent
         self.backups = backups
         self.result: BackupInfo | None = None
+        self._dialog_closed = False
+        self._raise_after_id = ""
 
         self.window = tk.Toplevel(parent)
         self.window.title("Restore Backup")
@@ -55,7 +57,17 @@ class RestoreBackupDialog:
         self.window.update_idletasks()
         self.window.lift(self.parent)
         self.window.focus_force()
-        self.window.after(50, lambda: self.window.lift(self.parent))
+        self._raise_after_id = self.window.after(50, self._raise_near_parent_if_open)
+
+    def _raise_near_parent_if_open(self) -> None:
+        self._raise_after_id = ""
+        if self._dialog_closed:
+            return
+        try:
+            if self.window.winfo_exists():
+                self.window.lift(self.parent)
+        except tk.TclError:
+            return
 
     def _build_ui(self) -> None:
         header = tk.Frame(self.window, bg=HEADER_BG, padx=18, pady=12)
@@ -152,11 +164,26 @@ class RestoreBackupDialog:
             self._refresh_restore_button()
             return
         self.result = backup
-        self.window.destroy()
+        self._close_dialog()
 
     def show(self) -> BackupInfo | None:
         self.parent.wait_window(self.window)
         return self.result
 
     def _cancel(self) -> None:
-        self.window.destroy()
+        self._close_dialog()
+
+    def _close_dialog(self) -> None:
+        if self._dialog_closed:
+            return
+        self._dialog_closed = True
+        if self._raise_after_id:
+            try:
+                self.window.after_cancel(self._raise_after_id)
+            except tk.TclError:
+                pass
+            self._raise_after_id = ""
+        try:
+            self.window.destroy()
+        except tk.TclError:
+            pass
