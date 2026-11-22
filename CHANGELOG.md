@@ -2,6 +2,30 @@
 
 All notable user-facing changes for EditorBinder are documented here.
 
+## 0.1.3 - 2026-11-22
+
+### Improved
+
+- Expanded Unreal Python linting to recognize additional mutating Actor/component operations and unreal.log_error().
+- Hardened tool-library and settings persistence with UTF-8 BOM tolerance, strict decoding, atomic replacement, fsync, and failed-write cleanup.
+- Hardened tool-pack ZIP import by rejecting absolute, drive-qualified, and parent-traversal member paths.
+- Made dialog timers trackable and cancellable during teardown, and moved AI-generation result handoff onto a thread-safe queue consumed by the UI thread.
+- Hardened monitor and work-area geometry validation.
+- Updated the documented preset test matrix to the current 21-tool Free Core catalog.
+
+### Validation
+
+- 215 automated tests passed locally.
+- Ruff and Python bytecode compilation passed.
+- GitHub Actions Windows CI passed on Python 3.10, 3.11, and 3.12.
+- The release workflow builds and verifies the versioned Windows EXE, portable ZIP, and source ZIP from a clean Windows runner.
+
+### Notes
+
+- The bundled Free Core remains at 21 tools. This release focuses on application reliability, import safety, and authoring workflows rather than adding new bundled scripts.
+- EditorBinder copies scripts to the clipboard for review and execution in Unreal Editor. It does not execute them directly in Unreal.
+- The Windows executable is unsigned, so Microsoft Defender SmartScreen may show an Unknown publisher warning.
+
 ## 0.1.2 - 2026-11-22
 
 ### Added

@@ -69,7 +69,7 @@ class PackagingTests(unittest.TestCase):
             "docs/deployment.md",
             "docs/preset_test_matrix.md",
             "docs/tool_packs.md",
-            "docs/releases/v0.1.2.md",
+            "docs/releases/v0.1.3.md",
         ]:
             self.assertIn(required_file, files)
 
@@ -81,6 +81,22 @@ class PackagingTests(unittest.TestCase):
         self.assertFalse(any(path.startswith("tests/") for path in files))
         self.assertFalse(any(path.startswith("tools/") for path in files))
         self.assertFalse(any("__pycache__" in path for path in files))
+
+    def test_release_workflow_uses_project_version_for_assets(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+        version_expr = "$" + "{{ steps.project_version.outputs.version }}"
+        tag_expr = "$" + "{{ github.ref_name }}"
+
+        self.assertIn("id: project_version", workflow)
+        self.assertIn('echo "version=$version" >> $env:GITHUB_OUTPUT', workflow)
+        self.assertIn("docs/releases/" + tag_expr + ".md", workflow)
+        self.assertIn("dist/EditorBinder-" + version_expr + "-win-x64.exe", workflow)
+        self.assertIn("dist/EditorBinder-" + version_expr + "-win-x64.zip", workflow)
+        self.assertIn("dist/EditorBinder-source-" + version_expr + ".zip", workflow)
+        self.assertNotIn("EditorBinder-0.1.2-win-x64.exe", workflow)
+        self.assertNotIn("EditorBinder-0.1.2-win-x64.zip", workflow)
+        self.assertNotIn("EditorBinder-source-0.1.2.zip", workflow)
 
     def test_source_release_zip_contains_expected_files(self) -> None:
         module = _load_packaging_module()

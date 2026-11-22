@@ -137,7 +137,7 @@ a clean temporary folder, extract them, and check:
 
 ## Automated GitHub Release
 
-Pushing a version tag such as `v0.1.2` starts `.github/workflows/release.yml`.
+Pushing a version tag such as `v0.1.3` starts `.github/workflows/release.yml`.
 The workflow verifies that the tag matches `pyproject.toml`, runs Ruff and the
 full test suite on Python 3.10, 3.11, and 3.12, builds the Windows standalone
 EXE and portable ZIP plus the source ZIP, verifies all public artifacts, and
