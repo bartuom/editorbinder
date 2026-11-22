@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
@@ -1581,7 +1582,10 @@ def _parse_positive_int(value: str, *, default: int) -> int:
 
 def _parse_float(value: str, *, default: float) -> float:
     try:
-        return float(str(value).strip().replace(",", "."))
-    except ValueError:
+        number = float(str(value).strip().replace(",", "."))
+    except (TypeError, ValueError):
         return default
+    if not math.isfinite(number):
+        return default
+    return min(2.0, max(0.0, number))
 
