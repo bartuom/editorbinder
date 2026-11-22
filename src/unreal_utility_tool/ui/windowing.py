@@ -56,7 +56,59 @@ def set_generated_app_icon(root: tk.Tk) -> tk.PhotoImage | None:
 
 
 def is_valid_geometry(geometry: str) -> bool:
-    return bool(re.match(r"^\d+x\d+[+-]\d+[+-]\d+$", geometry.strip()))
+    return bool(re.match(r"^\d+x\d+[+-][+-]?\d+[+-][+-]?\d+$", geometry.strip()))
+
+
+DEFAULT_MIN_WINDOW_WIDTH = 380
+DEFAULT_MIN_WINDOW_HEIGHT = 320
+
+
+def clamp_geometry_to_screen(
+    geometry: str,
+    screen_width: int,
+    screen_height: int,
+    min_visible: int = 40,
+    *,
+    min_width: int = DEFAULT_MIN_WINDOW_WIDTH,
+    min_height: int = DEFAULT_MIN_WINDOW_HEIGHT,
+) -> str | None:
+    if screen_width <= 0 or screen_height <= 0:
+        return None
+    if not isinstance(geometry, str):
+        return None
+
+    match = re.match(r"^(\d+)x(\d+)([+-][+-]?\d+)([+-][+-]?\d+)$", geometry.strip())
+    if not match:
+        return None
+
+    try:
+        width = int(match.group(1))
+        height = int(match.group(2))
+        x_str = match.group(3).replace("+", "")
+        y_str = match.group(4).replace("+", "")
+        x = int(x_str) if x_str else 0
+        y = int(y_str) if y_str else 0
+    except (ValueError, TypeError):
+        return None
+
+    effective_min_width = max(min_width, min_visible)
+    effective_min_height = max(min_height, min_visible)
+
+    if width < effective_min_width or height < effective_min_height:
+        return None
+    if screen_width < effective_min_width or screen_height < effective_min_height:
+        return None
+
+    width = min(width, screen_width)
+    height = min(height, screen_height)
+
+    max_x = max(0, screen_width - width)
+    max_y = max(0, screen_height - height)
+
+    clamped_x = max(0, min(x, max_x))
+    clamped_y = max(0, min(y, max_y))
+
+    return f"{width}x{height}+{clamped_x}+{clamped_y}"
 
 
 def set_initial_window_size(root: tk.Tk) -> None:
@@ -69,7 +121,7 @@ def set_initial_window_size(root: tk.Tk) -> None:
     root.geometry(f"{width}x{height}+{x}+{y}")
 
 
-def configure_windows_window(root: tk.Tk) -> None:
+def configure_windows_window(root: tk.Tk | tk.Toplevel) -> None:
     try:
         import ctypes
 

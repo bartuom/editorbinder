@@ -6,7 +6,12 @@ from tkinter import ttk
 from ..models import Tool
 from ..prompts import build_fix_prompt
 from ..theme import BG, BORDER, CODE_BG, HEADER_BG, MUTED, PANEL, SMALL_FONT, TEXT, TITLE_FONT, UI_FONT, make_button
-from .windowing import _compute_dialog_geometry, _fallback_work_area_for_widget, _monitor_work_area_for_widget
+from .windowing import (
+    _compute_dialog_geometry,
+    _fallback_work_area_for_widget,
+    _monitor_work_area_for_widget,
+    configure_windows_window,
+)
 
 
 class FixPromptDialog:
@@ -22,6 +27,7 @@ class FixPromptDialog:
         self.window.configure(bg=BG)
         self.window.transient(parent)
         self.window.grab_set()
+        configure_windows_window(self.window)
         self.window.columnconfigure(0, weight=1)
         self.window.rowconfigure(1, weight=1)
 
