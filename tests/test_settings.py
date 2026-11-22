@@ -16,6 +16,7 @@ class SettingsTests(unittest.TestCase):
 
         self.assertEqual(settings.geometry, "")
         self.assertEqual(settings.always_top, False)
+        self.assertEqual(settings.deleted_preset_ids, [])
         self.assertEqual(settings.param_values, {})
         self.assertEqual(settings.details_panel_width, 360)
         self.assertEqual(settings.details_panel_height, 520)
@@ -38,6 +39,7 @@ class SettingsTests(unittest.TestCase):
                     always_top=True,
                     favorite_ids=["a"],
                     recent_ids=["b"],
+                    deleted_preset_ids=["preset-deleted-1"],
                     param_values={"tool-a": {"amount": "3"}},
                     details_panel_width=420,
                     details_panel_height=360,
@@ -59,6 +61,7 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.always_top, True)
         self.assertEqual(settings.favorite_ids, ["a"])
         self.assertEqual(settings.recent_ids, ["b"])
+        self.assertEqual(settings.deleted_preset_ids, ["preset-deleted-1"])
         self.assertEqual(settings.param_values, {"tool-a": {"amount": "3"}})
         self.assertEqual(settings.details_panel_width, 420)
         self.assertEqual(settings.details_panel_height, 360)
@@ -85,7 +88,23 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.details_panel_width, 360)
         self.assertEqual(settings.details_panel_height, 520)
         self.assertEqual(settings.collapsed_detail_sections, ["Source", "Tool"])
+        self.assertEqual(settings.deleted_preset_ids, [])
         self.assertEqual(settings.ai_api_key_env, "EDITORBINDER_API_KEY")
+
+    def test_deleted_preset_ids_round_trip_and_compatibility(self) -> None:
+        # Default empty list handling
+        default_settings = AppSettings()
+        self.assertEqual(default_settings.deleted_preset_ids, [])
+        self.assertEqual(default_settings.to_dict()["deleted_preset_ids"], [])
+
+        # Deserialization from dict without key
+        from_empty = AppSettings.from_dict({})
+        self.assertEqual(from_empty.deleted_preset_ids, [])
+
+        # Deserialization from dict with key
+        loaded = AppSettings.from_dict({"deleted_preset_ids": ["preset-one", "preset-two"]})
+        self.assertEqual(loaded.deleted_preset_ids, ["preset-one", "preset-two"])
+        self.assertEqual(loaded.to_dict()["deleted_preset_ids"], ["preset-one", "preset-two"])
 
 
 if __name__ == "__main__":

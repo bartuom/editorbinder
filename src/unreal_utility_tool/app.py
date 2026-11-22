@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from .storage import ToolLibraryStore, ensure_default_storage_seeded
+from .settings import AppSettingsStore, resolve_default_settings_path
+from .storage import (
+    ToolLibraryStore,
+    ensure_default_storage_seeded,
+    resolve_default_storage_path,
+)
 from .ui.windowing import configure_windows_window
 
 
@@ -22,10 +27,17 @@ def main() -> int:
     except Exception:
         pass
 
-    storage_path = ensure_default_storage_seeded()
+    storage_path = resolve_default_storage_path()
     store = ToolLibraryStore(storage_path)
+    settings_store = AppSettingsStore(resolve_default_settings_path())
+    settings = settings_store.load()
+    ensure_default_storage_seeded(
+        storage_path,
+        store=store,
+        ignored_ids=set(settings.deleted_preset_ids or []),
+    )
     root = tk.Tk()
-    UnrealUtilityApp(root, store)
+    UnrealUtilityApp(root, store, settings_store=settings_store)
     configure_windows_window(root)
     root.mainloop()
     return 0

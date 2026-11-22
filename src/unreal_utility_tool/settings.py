@@ -12,6 +12,7 @@ class AppSettings:
     always_top: bool = False
     favorite_ids: list[str] | None = None
     recent_ids: list[str] | None = None
+    deleted_preset_ids: list[str] | None = field(default_factory=list)
     param_values: dict[str, dict[str, str]] = field(default_factory=dict)
     details_panel_width: int = 360
     details_panel_height: int = 520
@@ -32,6 +33,7 @@ class AppSettings:
             always_top=bool(raw.get("always_top", False)),
             favorite_ids=_string_list(raw.get("favorite_ids")),
             recent_ids=_string_list(raw.get("recent_ids")),
+            deleted_preset_ids=_string_list(raw.get("deleted_preset_ids")),
             param_values=_param_values(raw.get("param_values")),
             details_panel_width=_positive_int(raw.get("details_panel_width"), default=360),
             details_panel_height=_positive_int(raw.get("details_panel_height"), default=520),
@@ -52,6 +54,7 @@ class AppSettings:
             "always_top": self.always_top,
             "favorite_ids": list(self.favorite_ids or []),
             "recent_ids": list(self.recent_ids or []),
+            "deleted_preset_ids": list(self.deleted_preset_ids or []),
             "param_values": {
                 str(tool_id): {str(name): str(value) for name, value in values.items()}
                 for tool_id, values in (self.param_values or {}).items()
